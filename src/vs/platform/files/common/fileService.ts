@@ -48,8 +48,10 @@ export class FileService extends Disposable implements IFileService {
 
 	private readonly provider = new Map<string, IFileSystemProvider>();
 
+	// 返回的 disposable 用于取消注册这个 provider
 	registerProvider(scheme: string, provider: IFileSystemProvider): IDisposable {
 		if (this.provider.has(scheme)) {
+			// 对于特定 scheme 只能注册一个 IFileSystemProvider
 			throw new Error(`A filesystem provider for the scheme '${scheme}' is already registered.`);
 		}
 
@@ -80,6 +82,7 @@ export class FileService extends Disposable implements IFileService {
 		return this.provider.get(scheme);
 	}
 
+	// 激活特定 scheme 的 provider，其实是通知并等待别人注册这个 provider
 	async activateProvider(scheme: string): Promise<void> {
 
 		// Emit an event that we are about to activate a provider with the given scheme.
@@ -87,7 +90,7 @@ export class FileService extends Disposable implements IFileService {
 		const joiners: Promise<void>[] = [];
 		this._onWillActivateFileSystemProvider.fire({
 			scheme,
-			join(promise) {
+			join(promise) { // join 由事件监听者调用，传入的 promise 应该在注册 provider 之后 resolve
 				joiners.push(promise);
 			},
 		});
@@ -101,6 +104,8 @@ export class FileService extends Disposable implements IFileService {
 		await Promises.settled(joiners);
 	}
 
+	// 判断 resource 是否能被某 provider 处理
+	// 副作用是会尝试激活 provider
 	async canHandleResource(resource: URI): Promise<boolean> {
 
 		// Await activation of potentially extension contributed providers
@@ -123,9 +128,12 @@ export class FileService extends Disposable implements IFileService {
 		return Iterable.map(this.provider, ([scheme, provider]) => ({ scheme, capabilities: provider.capabilities }));
 	}
 
+	// 返回能处理 resource 的 provider
+	// 副作用是会尝试激活 provider
 	protected async withProvider(resource: URI): Promise<IFileSystemProvider> {
 
 		// Assert path is absolute
+		// 必须是绝对路径
 		if (!isAbsolutePath(resource)) {
 			throw new FileOperationError(localize('invalidPath', "Unable to resolve filesystem provider with relative file path '{0}'", this.resourceForError(resource)), FileOperationResult.FILE_INVALID_PATH);
 		}

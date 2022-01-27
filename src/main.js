@@ -25,23 +25,37 @@ const { getUserDataPath } = require('./vs/platform/environment/node/userDataPath
 const product = require('../product.json');
 const { app, protocol, crashReporter } = require('electron');
 
+// 设为 true 表示允许渲染进程被重用，而非每次导航都创建新进程。
+// 设为 false 主要是为了解决在一个进程中多次加载原生模块会产生的问题。
+// Electron 默认将它为 true，且在最新版中已经废弃修改此选项的能力；
+// 因为 Electron 认为应该使用 Context Aware 和 NAPI 的原生模块。
+// 详见：https://github.com/electron/electron/issues/18397
 app.allowRendererProcessReuse = false;
 
 // Enable portable support
+// 支持可移植
 const portable = bootstrapNode.configurePortable(product);
 
 // Enable ASAR support
+// 使能 ASAR 应用打包支持
+// https://www.electronjs.org/docs/latest/tutorial/application-distribution#with-an-app-source-code-archive
 bootstrap.enableASARSupport();
 
 // Set userData path before app 'ready' event
+// 解析命令行参数得到键值对 object
 const args = parseCLIArgs();
+// 获取并设置 userData 用户数据目录
+// 对于 Windows 上的 VS Code 来说，默认是 %APPDATA%\Code，也就是 %USERPROFILE%\AppData\Roaming\Code
 const userDataPath = getUserDataPath(args);
 app.setPath('userData', userDataPath);
 
 // Resolve code cache path
+// 对于 Windows 上的 VS Code 来说，就是用户数据目录下的 CachedData\<VS Code 的 Commit 号>
 const codeCachePath = getCodeCachePath();
 
 // Configure static command line arguments
+// 对于 Windows 上的 VS Code 来说，就是 %USERPROFILE%\.vscode\argv.json
+// 用于配置仅几个允许的永久性的命令行参数，可以跨 VS Code 升级都保持不变
 const argvConfig = configureCommandlineSwitchesSync(args);
 
 // Configure crash reporter
@@ -56,6 +70,7 @@ perf.mark('code/willStartCrashReporter');
 // Disable crash reporting in all other cases.
 if (args['crash-reporter-directory'] ||
 	(argvConfig['enable-crash-reporter'] && !args['disable-crash-reporter'])) {
+	// 要么设置崩溃报告目录，要么把崩溃报告上传到 product.json 中配置的 appCenter
 	configureCrashReporter();
 }
 perf.mark('code/didStartCrashReporter');
@@ -65,10 +80,15 @@ perf.mark('code/didStartCrashReporter');
 // location outside of the portable directory
 // (https://github.com/microsoft/vscode/issues/56651)
 if (portable && portable.isPortable) {
+	// logs 日志目录默认就在用户数据目录下 logs 目录
+	// 这里在可移植模式下显示设置它
 	app.setAppLogsPath(path.join(userDataPath, 'logs'));
 }
 
 // Register custom schemes with privileges
+// 为定制 scheme 的协议注册特权
+// standard, secure, bypassCSP, allowServiceWorkers, supportFetchAPI, corsEnabled, stream
+// https://www.electronjs.org/docs/latest/api/protocol
 protocol.registerSchemesAsPrivileged([
 	{
 		scheme: 'vscode-webview',
@@ -81,6 +101,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 // Global app listeners
+// 当前仅是处理 macOS 中的打开文件和打开 URL 的事件
 registerListeners();
 
 /**
@@ -89,18 +110,18 @@ registerListeners();
  *
  * @type {Promise<NLSConfiguration> | undefined}
  */
-let nlsConfigurationPromise = undefined;
+let nlsConfigurationPromise = undefined; // 用户定义的 locale 的 promise
 
-const metaDataFile = path.join(__dirname, 'nls.metadata.json');
+const metaDataFile = path.join(__dirname, 'nls.metadata.json'); // 位于 out 目录下
 const locale = getUserDefinedLocale(argvConfig);
-if (locale) {
+if (locale) { // 默认情况下没有设置用户定义的 locale
 	const { getNLSConfiguration } = require('./vs/base/node/languagePacks');
 	nlsConfigurationPromise = getNLSConfiguration(product.commit, userDataPath, metaDataFile, locale);
 }
 
 // Load our code once ready
 app.once('ready', function () {
-	if (args['trace']) {
+	if (args['trace']) { // Chromium 的 tracing
 		const contentTracing = require('electron').contentTracing;
 
 		const traceOptions = {
@@ -128,6 +149,7 @@ function startup(codeCachePath, nlsConfig) {
 
 	// Load main in AMD
 	perf.mark('code/willLoadMainBundle');
+	// 加载 vs/code/electron-main/main.ts
 	require('./bootstrap-amd').load('vs/code/electron-main/main', () => {
 		perf.mark('code/didLoadMainBundle');
 	});
@@ -180,12 +202,16 @@ function configureCommandlineSwitchesSync(cliArgs) {
 	];
 
 	// Read argv config
+	// 对于 Windows 上的 VS Code 来说，就是 %USERPROFILE%\.vscode\argv.json
+	// 用于配置仅几个允许的永久性的命令行参数，可以跨 VS Code 升级都保持不变
 	const argvConfig = readArgvConfigSync();
 
 	Object.keys(argvConfig).forEach(argvKey => {
 		const argvValue = argvConfig[argvKey];
 
 		// Append Electron flags to Electron
+		// 用于配置 Chromium 的几个命令行参数，但是不影响当前的 process.argv
+		// 详见：https://www.chromium.org/developers/how-tos/run-chromium-with-flags
 		if (SUPPORTED_ELECTRON_SWITCHES.indexOf(argvKey) !== -1) {
 
 			// Color profile
@@ -206,6 +232,7 @@ function configureCommandlineSwitchesSync(cliArgs) {
 		}
 
 		// Append main process flags to process.argv
+		// 直接影响主进程的 process.argv
 		else if (SUPPORTED_MAIN_PROCESS_SWITCHES.indexOf(argvKey) !== -1) {
 			switch (argvKey) {
 				case 'enable-proposed-api':
@@ -232,6 +259,9 @@ function configureCommandlineSwitchesSync(cliArgs) {
 	});
 
 	// Support JS Flags
+	// 从命令行中得到 --js-flags 的字符串值
+	// 用于配置给 Chromium 的命令行参数 --js-flags
+	// 详见：https://www.chromium.org/developers/how-tos/run-chromium-with-flags/#v8-flags
 	const jsFlags = getJSFlags(cliArgs);
 	if (jsFlags) {
 		app.commandLine.appendSwitch('js-flags', jsFlags);
@@ -243,12 +273,14 @@ function configureCommandlineSwitchesSync(cliArgs) {
 function readArgvConfigSync() {
 
 	// Read or create the argv.json config file sync before app('ready')
+	// 对于 Windows 上的 VS Code 来说，就是 %USERPROFILE%\.vscode\argv.json
 	const argvConfigPath = getArgvConfigPath();
 	let argvConfig;
 	try {
 		argvConfig = JSON.parse(stripComments(fs.readFileSync(argvConfigPath).toString()));
 	} catch (error) {
 		if (error && error.code === 'ENOENT') {
+			// 不存在这个文件，就创建默认的
 			createDefaultArgvConfigSync(argvConfigPath);
 		} else {
 			console.warn(`Unable to read argv.json configuration file in ${argvConfigPath}, falling back to defaults (${error})`);
@@ -310,6 +342,7 @@ function getArgvConfigPath() {
 		return path.join(vscodePortable, 'argv.json');
 	}
 
+	// Windows 下的 VS Code，dataFolderName 为 .vscode
 	let dataFolderName = product.dataFolderName;
 	if (process.env['VSCODE_DEV']) {
 		dataFolderName = `${dataFolderName}-dev`;
@@ -439,7 +472,10 @@ function getJSFlags(cliArgs) {
 function parseCLIArgs() {
 	const minimist = require('minimist');
 
+	// 使用 minimist 包来解析命令行参数为一个键值对的 object
+	// 其中非键值选项也即位置参数被放到以 _ 为键的数组中
 	return minimist(process.argv, {
+		// 以下键对应的参数值都被对待为 string 类型
 		string: [
 			'user-data-dir',
 			'locale',
@@ -459,7 +495,7 @@ function registerListeners() {
 	 * @type {string[]}
 	 */
 	const macOpenFiles = [];
-	global['macOpenFiles'] = macOpenFiles;
+	global['macOpenFiles'] = macOpenFiles; // 记录启动时要打开的文件
 	app.on('open-file', function (event, path) {
 		macOpenFiles.push(path);
 	});
@@ -482,12 +518,15 @@ function registerListeners() {
 		};
 
 	app.on('will-finish-launching', function () {
+		// 监听 open-url 事件
 		app.on('open-url', onOpenUrl);
 	});
 
 	global['getOpenUrls'] = function () {
+		// 不再监听 open-url 事件
 		app.removeListener('open-url', onOpenUrl);
 
+		// 因此 openUrls 就是启动时用一下
 		return openUrls;
 	};
 }
@@ -564,6 +603,7 @@ async function resolveNlsConfiguration() {
 		// code is here.
 		let appLocale = app.getLocale();
 		if (!appLocale) {
+			// 回退到 English
 			nlsConfiguration = { locale: 'en', availableLanguages: {} };
 		} else {
 
@@ -578,6 +618,7 @@ async function resolveNlsConfiguration() {
 		}
 	} else {
 		// We received a valid nlsConfig from a user defined locale
+		// 用户定义的 locale
 	}
 
 	return nlsConfiguration;

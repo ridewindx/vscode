@@ -61,11 +61,13 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 	}
 
 	private vetoBeforeUnload(event: BeforeUnloadEvent): void {
+		// 阻止 unload，让浏览器弹出对话框使得用户选择是否真得 unload
 		event.preventDefault();
 		event.returnValue = localize('lifecycleVeto', "Changes that you made may not be saved. Please check press 'Cancel' and try again.");
 	}
 
 	withExpectedShutdown(reason: ShutdownReason): Promise<void>;
+	// 这个 disableShutdownHandling 其实相当于一个可读的占位符，也标识了函数重载
 	withExpectedShutdown(reason: { disableShutdownHandling: true }, callback: Function): void;
 	withExpectedShutdown(reason: ShutdownReason | { disableShutdownHandling: true }, callback?: Function): Promise<void> | void {
 
@@ -79,6 +81,7 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 
 		// Before unload handling ignored for duration of callback
 		else {
+			// 在执行 callback 期间终止 onBeforeUnload 执行具体逻辑
 			this.ignoreBeforeUnload = true;
 			try {
 				callback?.();
@@ -106,6 +109,7 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 	private doShutdown(vetoShutdown?: () => void): void {
 		const logService = this.logService;
 
+		// 乐观地触发 UI 状态的 flush 持久化
 		// Optimistically trigger a UI state flush
 		// without waiting for it. The browser does
 		// not guarantee that this is being executed
@@ -123,6 +127,7 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 			if (vetoResult instanceof Promise) {
 				logService.error(`[lifecycle] Long running operations before shutdown are unsupported in the web (id: ${id})`);
 
+				// Web 环境中不支持 veto，但这里认为是否决
 				veto = true; // implicitly vetos since we cannot handle promises in web
 			}
 
@@ -167,6 +172,7 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 		const logService = this.logService;
 		this._onWillShutdown.fire({
 			join(promise, id) {
+				// Web 环境中不支持 join
 				logService.error(`[lifecycle] Long running operations during shutdown are unsupported in the web (id: ${id})`);
 			},
 			reason: ShutdownReason.QUIT
@@ -182,6 +188,7 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 		// where the browser indicates to us that the
 		// page was restored from cache and not freshly
 		// loaded.
+		// 只关心页面是从缓存中恢复的，而不是新加载的
 		const wasRestoredFromCache = event.persisted;
 		if (!wasRestoredFromCache) {
 			return;
@@ -193,6 +200,7 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 		// currently can only reload the window
 		// Docs: https://web.dev/bfcache/#optimize-your-pages-for-bfcache
 		// Refs: https://github.com/microsoft/vscode/issues/136035
+		// 重新加载
 		this.withExpectedShutdown({ disableShutdownHandling: true }, () => window.location.reload());
 	}
 }

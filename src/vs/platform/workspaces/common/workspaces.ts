@@ -22,8 +22,8 @@ import { getRemoteAuthority } from 'vs/platform/remote/common/remoteHosts';
 import { IWorkspace, IWorkspaceFolder, WorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 
 export const WORKSPACE_EXTENSION = 'code-workspace';
-const WORKSPACE_SUFFIX = `.${WORKSPACE_EXTENSION}`;
-export const WORKSPACE_FILTER = [{ name: localize('codeWorkspace', "Code Workspace"), extensions: [WORKSPACE_EXTENSION] }];
+const WORKSPACE_SUFFIX = `.${WORKSPACE_EXTENSION}`; // 工作区配置文件名的后缀为 .code-workspace
+export const WORKSPACE_FILTER = [{ name: localize('codeWorkspace', "Code Workspace"), extensions: [WORKSPACE_EXTENSION] }]; // 打开工作区对话框中的文件过滤器
 export const UNTITLED_WORKSPACE_NAME = 'workspace.json';
 
 export function hasWorkspaceFileExtension(path: string | URI) {
@@ -127,6 +127,7 @@ export interface IBaseWorkspaceIdentifier {
 	 * Every workspace (multi-root, single folder or empty)
 	 * has a unique identifier. It is not possible to open
 	 * a workspace with the same `id` in multiple windows
+	 * 每个工作区都有唯一的 ID；同一 ID 的工作区只能在一个窗口实例中打开
 	 */
 	id: string;
 }
@@ -159,6 +160,7 @@ export interface IWorkspaceIdentifier extends IBaseWorkspaceIdentifier {
 
 	/**
 	 * Workspace config file path as `URI`.
+	 * 工作区配置文件路径
 	 */
 	configPath: URI;
 }
@@ -362,6 +364,7 @@ export function toWorkspaceFolders(configuredFolders: IStoredWorkspaceFolder[], 
 		let uri: URI | undefined = undefined;
 		if (isRawFileWorkspaceFolder(configuredFolder)) {
 			if (configuredFolder.path) {
+				// path 是相对于工作区配置文件所在目录的相对路径，所以要 resolve 一下
 				uri = extUri.resolvePath(relativeTo, configuredFolder.path);
 			}
 		} else if (isRawUriWorkspaceFolder(configuredFolder)) {
@@ -382,6 +385,7 @@ export function toWorkspaceFolders(configuredFolders: IStoredWorkspaceFolder[], 
 			if (!seen.has(comparisonKey)) {
 				seen.add(comparisonKey);
 
+				// 若没有 name，则取目录名或 URI 的 authority
 				const name = configuredFolder.name || extUri.basenameOrAuthority(uri);
 				result.push(new WorkspaceFolder({ uri, name, index: result.length }, configuredFolder));
 			}

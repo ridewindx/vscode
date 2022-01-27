@@ -32,18 +32,18 @@ export interface ICommandHandler {
 }
 
 export interface ICommand {
-	id: string;
-	handler: ICommandHandler;
+	id: string; // 命令 id
+	handler: ICommandHandler; // 命令处理器，值得注意的是命令处理器能够拿到服务访问器
 	description?: ICommandHandlerDescription | null;
 }
 
 export interface ICommandHandlerDescription {
-	readonly description: string;
-	readonly args: ReadonlyArray<{
+	readonly description: string; // 命令描述
+	readonly args: ReadonlyArray<{ // 命令的每个参数的元数据
 		readonly name: string;
 		readonly isOptional?: boolean;
 		readonly description?: string;
-		readonly constraint?: TypeConstraint;
+		readonly constraint?: TypeConstraint; // 对命令的参数的约束
 		readonly schema?: IJSONSchema;
 	}>;
 	readonly returns?: string;
@@ -53,11 +53,12 @@ export interface ICommandRegistry {
 	onDidRegisterCommand: Event<string>;
 	registerCommand(id: string, command: ICommandHandler): IDisposable;
 	registerCommand(command: ICommand): IDisposable;
-	registerCommandAlias(oldId: string, newId: string): IDisposable;
+	registerCommandAlias(oldId: string, newId: string): IDisposable; // 注册命令 newId 的别名为 oldId，应该是需要向后兼容时
 	getCommand(id: string): ICommand | undefined;
 	getCommands(): ICommandsMap;
 }
 
+// CommandsRegistry 是全局的命令注册中心
 export const CommandsRegistry: ICommandRegistry = new class implements ICommandRegistry {
 
 	private readonly _commands = new Map<string, LinkedList<ICommand>>();
@@ -86,7 +87,7 @@ export const CommandsRegistry: ICommandRegistry = new class implements ICommandR
 			}
 			const actualHandler = idOrCommand.handler;
 			idOrCommand.handler = function (accessor, ...args: any[]) {
-				validateConstraints(args, constraints);
+				validateConstraints(args, constraints); // 验证命令的每个参数
 				return actualHandler(accessor, ...args);
 			};
 		}

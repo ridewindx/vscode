@@ -13,12 +13,17 @@ import { StopWatch } from 'vs/base/common/stopwatch';
 /**
  * To an event a function with one or zero parameters
  * can be subscribed. The event is the subscriber function itself.
+ * Event 就是一个函数，理解为 event.addListener()，第一个入参是订阅函数或监听函数，它的入参为一个对象；
+ * 每次事件被触发，就会调用此订阅函数，且若 thisArgs 非空，则它被作为 this，否则把 undefined 作为 this；
+ * Event 函数调用返回的 disposable 用于取消订阅，相当于 event.removeListener()；
+ * 若 disposables 非空，返回的 disposable 也会被添加入 disposables，所以 disposables 相当于是清理器，以防忘记移除 listener
  */
 export interface Event<T> {
 	(listener: (e: T) => any, thisArgs?: any, disposables?: IDisposable[] | DisposableStore): IDisposable;
 }
 
 export namespace Event {
+	// 永远不会触发的事件
 	export const None: Event<any> = () => Disposable.None;
 
 	/**
@@ -354,8 +359,11 @@ export namespace Event {
 		removeEventListener(event: string | symbol, listener: Function): void;
 	}
 
+	// 把 DOM 事件转换为 Event
+	// map 是事件结果转换函数
 	export function fromDOMEventEmitter<T>(emitter: DOMEventEmitter, eventName: string, map: (...args: any[]) => T = id => id): Event<T> {
 		const fn = (...args: any[]) => result.fire(map(...args));
+		// 很巧妙地完成对 DOM 事件的监听和取消监听
 		const onFirstListenerAdd = () => emitter.addEventListener(eventName, fn);
 		const onLastListenerRemove = () => emitter.removeEventListener(eventName, fn);
 		const result = new Emitter<T>({ onFirstListenerAdd, onLastListenerRemove });
@@ -393,10 +401,10 @@ export namespace Event {
 export type Listener<T> = [(e: T) => void, any] | ((e: T) => void);
 
 export interface EmitterOptions {
-	onFirstListenerAdd?: Function;
-	onFirstListenerDidAdd?: Function;
-	onListenerDidAdd?: Function;
-	onLastListenerRemove?: Function;
+	onFirstListenerAdd?: Function; // 添加第一个 listener 前调用
+	onFirstListenerDidAdd?: Function; // 添加第一个 listener 后调用
+	onListenerDidAdd?: Function; // 每次添加 listener 后调用
+	onLastListenerRemove?: Function; // 移除最后一个 listener 后调用
 	leakWarningThreshold?: number;
 
 	/** ONLY enable this during development */
@@ -510,6 +518,8 @@ class LeakageMonitor {
 /**
  * The Emitter can be used to expose an Event to the public
  * to fire it from the insides.
+ * 事件发射器，其 event 成员用于添加事件订阅函数，fire 方法用于触发事件
+ * 需要注意的是，fire 会同步依次执行已经添加的事件订阅函数
  * Sample:
 	class Document {
 
@@ -548,7 +558,7 @@ export class Emitter<T> {
 	 * to events from this Emitter
 	 */
 	get event(): Event<T> {
-		if (!this._event) {
+		if (!this._event) { // 延迟实例化
 			this._event = (listener: (e: T) => any, thisArgs?: any, disposables?: IDisposable[] | DisposableStore) => {
 				if (!this._listeners) {
 					this._listeners = new LinkedList();
@@ -560,6 +570,7 @@ export class Emitter<T> {
 					this._options.onFirstListenerAdd(this);
 				}
 
+				// 若 thisArgs 非空，则会存储它，作为 listener 被调用时的 this
 				const remove = this._listeners.push(!thisArgs ? listener : [listener, thisArgs]);
 
 				if (firstListener && this._options && this._options.onFirstListenerDidAdd) {
@@ -577,8 +588,8 @@ export class Emitter<T> {
 					if (removeMonitor) {
 						removeMonitor();
 					}
-					if (!this._disposed) {
-						remove();
+					if (!this._disposed) { // 若此 Emitter 还没 dispose
+						remove(); // 移除此 listener
 						if (this._options && this._options.onLastListenerRemove) {
 							const hasListeners = (this._listeners && !this._listeners.isEmpty());
 							if (!hasListeners) {
@@ -625,9 +636,9 @@ export class Emitter<T> {
 				const [listener, event] = this._deliveryQueue.shift()!;
 				try {
 					if (typeof listener === 'function') {
-						listener.call(undefined, event);
+						listener.call(undefined, event); // 没有 thisArgs，则传入 undefined 作为 this
 					} else {
-						listener[0].call(listener[1], event);
+						listener[0].call(listener[1], event); // 传入 thisArgs 作为 this
 					}
 				} catch (e) {
 					onUnexpectedError(e);

@@ -59,6 +59,7 @@ export abstract class EditorInput extends AbstractEditorInput {
 	 * This resource should be unique for all editors of the same
 	 * kind and input and is often used to identify the editor input among
 	 * others.
+     * 此资源 URI 应该在所有同类型的 editor input 实例中是唯一的，它常用来区分不同的 editor input 实例
 	 *
 	 * **Note:** DO NOT use this property for anything but identity
 	 * checks. DO NOT use this property to present as label to the user.
@@ -259,6 +260,7 @@ export abstract class EditorInput extends AbstractEditorInput {
 	/**
 	 * If a editor was registered onto multiple editor panes, this method
 	 * will be asked to return the preferred one to use.
+	 * 一个 editor 可以注册到多个 editor pane 窗格中；此方法可以返回注册了此 editor 的且最偏好的 editor pane
 	 *
 	 * @param editorPanes a list of editor pane descriptors that are candidates
 	 * for the editor to open in.

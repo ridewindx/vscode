@@ -9,5 +9,5 @@
 export enum ColorScheme {
 	DARK = 'dark',
 	LIGHT = 'light',
-	HIGH_CONTRAST = 'hc'
+	HIGH_CONTRAST = 'hc' // 高对比度
 }

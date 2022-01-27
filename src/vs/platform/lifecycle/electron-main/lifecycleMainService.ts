@@ -127,6 +127,7 @@ export interface ILifecycleMainService {
 	 * that normally can be vetoed. Windows are destroyed without a chance
 	 * of components to participate. The only lifecycle event handler that
 	 * is triggered is `onWillShutdown` in the main process.
+	 * 不会触发大多数生命周期事件，只会触发 onWillShutdown
 	 */
 	kill(code?: number): Promise<void>;
 
@@ -189,7 +190,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 
 	private readonly windowToCloseRequest = new Set<number>();
 	private oneTimeListenerTokenGenerator = 0;
-	private windowCounter = 0;
+	private windowCounter = 0; // 记录打开的渲染窗口的数量
 
 	private pendingQuitPromise: Promise<boolean> | undefined = undefined;
 	private pendingQuitPromiseResolve: { (veto: boolean): void } | undefined = undefined;
@@ -209,6 +210,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 	}
 
 	private resolveRestarted(): void {
+		// 获取重启前保存的重启标识状态
 		this._wasRestarted = !!this.stateMainService.getItem(LifecycleMainService.QUIT_AND_RESTART_KEY);
 
 		if (this._wasRestarted) {
@@ -258,6 +260,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 
 		// will-quit: an event that is fired after all windows have been
 		// closed, but before actually quitting.
+		// 只监听 will-quit 事件一次，所以只有真正要退出前才会执行其 listener
 		app.once('will-quit', e => {
 			this.logService.trace('Lifecycle#app.on(will-quit)');
 
@@ -301,6 +304,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 		this.pendingWillShutdownPromise = (async () => {
 
 			// Settle all shutdown event joiners
+			// 等待所有 ShutdownEvent 的 join 完成
 			try {
 				await Promises.settled(joiners);
 			} catch (error) {
@@ -309,6 +313,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 
 			// Then, always make sure at the end
 			// the state service is flushed.
+			// flush 保存状态
 			try {
 				await this.stateMainService.close();
 			} catch (error) {
@@ -377,7 +382,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 			this.logService.trace(`Lifecycle#window.on('close') - window ID ${window.id}`);
 
 			// Otherwise prevent unload and handle it from window
-			e.preventDefault();
+			e.preventDefault(); // 阻止窗口自己的关闭行为
 			this.unload(window, UnloadReason.CLOSE).then(veto => {
 				if (veto) {
 					this.windowToCloseRequest.delete(windowId);
@@ -408,6 +413,8 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 			// if there are no more code windows opened, fire the onWillShutdown event, unless
 			// we are on macOS where it is perfectly fine to close the last window and
 			// the application continues running (unless quit was actually requested)
+			// 所有窗口都退出了，那么就相当于退出应用
+			// 但 macOS 允许窗口都关闭但是应用却不退出，所以需要明确有退出应用的请求
 			if (this.windowCounter === 0 && (!isMacintosh || this._quitRequested)) {
 				this.fireOnWillShutdown();
 			}
@@ -419,13 +426,14 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 		// Only reload when the window has not vetoed this
 		const veto = await this.unload(window, UnloadReason.RELOAD);
 		if (!veto) {
-			window.reload(cli);
+			window.reload(cli); // 重载窗口
 		}
 	}
 
 	async unload(window: ICodeWindow, reason: UnloadReason): Promise<boolean /* veto */> {
 
 		// Always allow to unload a window that is not yet ready
+		// 总是允许还没 ready 的窗口被 unload
 		if (!window.isReady) {
 			return false;
 		}
@@ -433,6 +441,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 		this.logService.trace(`Lifecycle#unload() - window ID ${window.id}`);
 
 		// first ask the window itself if it vetos the unload
+		// 询问渲染窗口是否否决 unload
 		const windowUnloadReason = this._quitRequested ? UnloadReason.QUIT : reason;
 		let veto = await this.onBeforeUnloadWindowInRenderer(window, windowUnloadReason);
 		if (veto) {
@@ -442,6 +451,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 		}
 
 		// then check for vetos in the main side
+		// 询问主进程是否否决 unload
 		veto = await this.onBeforeUnloadWindowInMain(window, windowUnloadReason);
 		if (veto) {
 			this.logService.trace(`Lifecycle#unload() - veto in main (window ID ${window.id})`);
@@ -452,6 +462,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 		this.logService.trace(`Lifecycle#unload() - no veto (window ID ${window.id})`);
 
 		// finally if there are no vetos, unload the renderer
+		// 高知渲染窗口 onWillUnload 并等待其处理完成
 		await this.onWillUnloadWindowInRenderer(window, windowUnloadReason);
 
 		return false;
@@ -481,6 +492,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 
 	private onBeforeUnloadWindowInRenderer(window: ICodeWindow, reason: UnloadReason): Promise<boolean /* veto */> {
 		return new Promise<boolean>(resolve => {
+			// 使用一次性 channel
 			const oneTimeEventToken = this.oneTimeListenerTokenGenerator++;
 			const okChannel = `vscode:ok${oneTimeEventToken}`;
 			const cancelChannel = `vscode:cancel${oneTimeEventToken}`;
@@ -531,6 +543,7 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 
 		// Remember if we are about to restart
 		if (willRestart) {
+			// 保存重启状态标识
 			this.stateMainService.setItem(LifecycleMainService.QUIT_AND_RESTART_KEY, true);
 		}
 
@@ -541,10 +554,13 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 
 			// Calling app.quit() will trigger the close handlers of each opened window
 			// and only if no window vetoed the shutdown, we will get the will-quit event
+			// 调用 app.quit() 会触发 close 事件给每个打开的窗口
+			// 若有窗口否决，则不退出；否则触发 will-quit 事件
 			this.logService.trace('Lifecycle#quit() - calling app.quit()');
 			app.quit();
 		});
 
+		// 等待其他地方 resolve 这个 pendingQuitPromise
 		return this.pendingQuitPromise;
 	}
 
@@ -612,10 +628,12 @@ export class LifecycleMainService extends Disposable implements ILifecycleMainSe
 		await Promise.race([
 
 			// still do not block more than 1s
+			// 最多等待 1s 销毁所有渲染窗口
 			timeout(1000),
 
 			// destroy any opened window
 			(async () => {
+				// 销毁所有渲染窗口
 				for (const window of BrowserWindow.getAllWindows()) {
 					if (window && !window.isDestroyed()) {
 						let whenWindowClosed: Promise<void>;

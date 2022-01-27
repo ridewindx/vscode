@@ -22,9 +22,11 @@ export class LoggerService extends AbstractLoggerService implements ILoggerServi
 	}
 
 	protected doCreateLogger(resource: URI, logLevel: LogLevel, options?: ILoggerOptions): ILogger {
+		// 常用场景肯定指定了 file 这个 scheme 吧
 		if (resource.scheme === Schemas.file) {
 			return new SpdLogLogger(options?.name || generateUuid(), resource.fsPath, !options?.donotRotate, !!options?.donotUseFormatters, logLevel);
 		} else {
+			// 所以这个是兼容遗留场景吧
 			return new FileLogger(options?.name ?? basename(resource), resource, logLevel, !!options?.donotUseFormatters, this.fileService);
 		}
 	}

@@ -24,6 +24,7 @@ if (process.env['VSCODE_INJECT_NODE_MODULE_LOOKUP_PATH']) {
 
 // Configure: pipe logging to parent process
 if (!!process.send && process.env['VSCODE_PIPE_LOGGING'] === 'true') {
+	// 日志输出到父进程
 	pipeLoggingToParent();
 }
 
@@ -34,6 +35,7 @@ if (!process.env['VSCODE_HANDLES_UNCAUGHT_ERRORS']) {
 
 // Terminate when parent terminates
 if (process.env['VSCODE_PARENT_PID']) {
+	// 当父进程终止时终止自己
 	terminateWhenParentTerminates();
 }
 

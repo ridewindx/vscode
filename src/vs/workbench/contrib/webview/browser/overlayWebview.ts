@@ -15,6 +15,10 @@ import { IWebviewService, KEYBINDING_CONTEXT_WEBVIEW_FIND_WIDGET_ENABLED, KEYBIN
 
 /**
  * Webview that is absolutely positioned over another element and that can creates and destroys an underlying webview as needed.
+ * 创建 container 元素挂载在布局服务的 container 元素下，绝对定位；
+ * layoutWebviewOverElement 方法把 container 元素覆盖在指定元素上方，且指定长宽；
+ * 创建 WebviewElement 元素挂载在 container 元素下
+ *
  */
 export class OverlayWebview extends Disposable implements IOverlayWebview {
 
@@ -89,6 +93,7 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 
 			// Webviews cannot be reparented in the dom as it will destroy their contents.
 			// Mount them to a high level node to avoid this.
+			// 把此 container 元素挂到布局服务的容器元素上
 			this._layoutService.container.appendChild(this._container);
 
 		}
@@ -146,7 +151,7 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 		const containerRect = this._container.parentElement.getBoundingClientRect();
 		const parentBorderTop = (containerRect.height - this._container.parentElement.clientHeight) / 2.0;
 		const parentBorderLeft = (containerRect.width - this._container.parentElement.clientWidth) / 2.0;
-		this._container.style.position = 'absolute';
+		this._container.style.position = 'absolute'; // 绝对定位
 		this._container.style.overflow = 'hidden';
 		this._container.style.top = `${frameRect.top - containerRect.top - parentBorderTop}px`;
 		this._container.style.left = `${frameRect.left - containerRect.left - parentBorderLeft}px`;
@@ -178,7 +183,7 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 
 			this._findWidgetEnabled?.set(!!this.options.enableFindWidget);
 
-			webview.mountTo(this.container);
+			webview.mountTo(this.container); // 挂到容器元素上
 
 			// Forward events from inner webview to outer listeners
 			this._webviewEvents.clear();

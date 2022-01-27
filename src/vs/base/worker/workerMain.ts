@@ -86,6 +86,7 @@
 			});
 			require([moduleId], function (ws) {
 				setTimeout(function () {
+					// 要求模块有 create 函数
 					let messageHandler = ws.create((msg: any, transfer?: Transferable[]) => {
 						(<any>self).postMessage(msg, transfer);
 					}, null);

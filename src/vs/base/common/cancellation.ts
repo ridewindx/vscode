@@ -25,6 +25,7 @@ export interface CancellationToken {
 }
 
 const shortcutEvent: Event<any> = Object.freeze(function (callback, context?): IDisposable {
+	// 下个事件循环中触发此事件
 	const handle = setTimeout(callback.bind(context), 0);
 	return { dispose() { clearTimeout(handle); } };
 });
@@ -46,11 +47,13 @@ export namespace CancellationToken {
 	}
 
 
+	// 永远不会触发取消被请求事件
 	export const None: CancellationToken = Object.freeze({
 		isCancellationRequested: false,
 		onCancellationRequested: Event.None
 	});
 
+	// 总是立即触发取消被请求事件
 	export const Cancelled: CancellationToken = Object.freeze({
 		isCancellationRequested: true,
 		onCancellationRequested: shortcutEvent
@@ -78,7 +81,7 @@ class MutableToken implements CancellationToken {
 
 	get onCancellationRequested(): Event<any> {
 		if (this._isCancelled) {
-			return shortcutEvent;
+			return shortcutEvent; // 总是会触发事件，表明取消被请求
 		}
 		if (!this._emitter) {
 			this._emitter = new Emitter<any>();
@@ -86,6 +89,7 @@ class MutableToken implements CancellationToken {
 		return this._emitter.event;
 	}
 
+	// 若单独调用 dispose，则通过 onCancellationRequested 添加的事件订阅器都会被移除
 	public dispose(): void {
 		if (this._emitter) {
 			this._emitter.dispose();
@@ -100,6 +104,7 @@ export class CancellationTokenSource {
 	private _parentListener?: IDisposable = undefined;
 
 	constructor(parent?: CancellationToken) {
+		// 若传入父 CancellationToken，则父 CancellationToken 被 cancel 时会级联 cancel 此 CancellationTokenSource 的 token
 		this._parentListener = parent && parent.onCancellationRequested(this.cancel, this);
 	}
 

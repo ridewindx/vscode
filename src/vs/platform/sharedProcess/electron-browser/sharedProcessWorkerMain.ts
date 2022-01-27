@@ -69,9 +69,11 @@ class SharedProcessWorkerMain {
 		try {
 
 			// Ensure to terminate any existing process for config
+			// 终止已存在相同配置的 worker 进程
 			this.terminate(configuration);
 
 			// Spawn a new worker process with given configuration
+			// 创建新 worker 进程
 			const process = new SharedProcessWorkerProcess(port, configuration, environment);
 			process.spawn();
 
@@ -127,8 +129,8 @@ class SharedProcessWorkerProcess extends Disposable {
 		Logger.trace(`Forking worker process (env: ${JSON.stringify(this.environment.env)})`);
 
 		// Fork module via bootstrap-fork for AMD support
-		this.child = fork(
-			this.environment.bootstrapPath,
+		this.child = fork( // 使用 Node.js 的 child_process 模块中的 fork
+			this.environment.bootstrapPath, // 使用 bootstrap-fork.js 加载脚本
 			[`--type=${this.configuration.process.type}`],
 			{ env: this.getEnv() }
 		);
@@ -195,7 +197,7 @@ class SharedProcessWorkerProcess extends Disposable {
 		const env: NodeJS.ProcessEnv = {
 			...deepClone(process.env),
 			...this.environment.env,
-			VSCODE_AMD_ENTRYPOINT: this.configuration.process.moduleId,
+			VSCODE_AMD_ENTRYPOINT: this.configuration.process.moduleId, // 要加载的模块
 			VSCODE_PIPE_LOGGING: 'true',
 			VSCODE_VERBOSE_LOGGING: 'true',
 			VSCODE_PARENT_PID: String(process.pid)
@@ -214,7 +216,7 @@ class SharedProcessWorkerProcess extends Disposable {
 			return;
 		}
 
-		this.child.kill();
+		this.child.kill(); // 杀死子进程
 		Logger.info(`Worker process with pid ${this.child?.pid} terminated normally (type: ${this.configuration.process.type}, window: ${this.configuration.reply.windowId}).`);
 	}
 }

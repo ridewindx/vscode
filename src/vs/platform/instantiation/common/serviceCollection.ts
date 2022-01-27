@@ -6,6 +6,7 @@
 import { ServiceIdentifier } from 'vs/platform/instantiation/common/instantiation';
 import { SyncDescriptor } from './descriptors';
 
+// 服务集合，其实就是一个 Map
 export class ServiceCollection {
 
 	private _entries = new Map<ServiceIdentifier<any>, any>();
@@ -18,8 +19,8 @@ export class ServiceCollection {
 
 	set<T>(id: ServiceIdentifier<T>, instanceOrDescriptor: T | SyncDescriptor<T>): T | SyncDescriptor<T> {
 		const result = this._entries.get(id);
-		this._entries.set(id, instanceOrDescriptor);
-		return result;
+		this._entries.set(id, instanceOrDescriptor); // 设置新的
+		return result; // 返回老的
 	}
 
 	has(id: ServiceIdentifier<any>): boolean {

@@ -101,6 +101,7 @@ export interface IEnvironmentService {
 /**
  * A subclass of the `IEnvironmentService` to be used only in native
  * environments (Windows, Linux, macOS) but not e.g. web.
+ * native 环境，非 Web 环境
  */
 export interface INativeEnvironmentService extends IEnvironmentService {
 

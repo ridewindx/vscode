@@ -21,6 +21,7 @@ export interface INativeEnvironmentPaths {
 	 * persisted except for the content that is meant for the `homeDir`.
 	 *
 	 * Only one instance of VSCode can use the same `userDataDir`.
+	 * 同一个用户数据目录只能被一个 VS Code 实例使用
 	 */
 	userDataDir: string
 
@@ -28,6 +29,8 @@ export interface INativeEnvironmentPaths {
 	 * The user home directory mainly used for persisting extensions
 	 * and global configuration that should be shared across all
 	 * versions.
+	 * Windows 下用户的 HOME 目录
+	 * 其下有 .vscode 目录：extensions 扩展持久化目录；argv.json 文件存放不随产品版本变更而变更的全局配置
 	 */
 	homeDir: string;
 
@@ -50,6 +53,7 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 	@memoize
 	get userDataPath(): string { return this.paths.userDataDir; }
 
+	// App 设置目录
 	@memoize
 	get appSettingsHome(): URI { return URI.file(join(this.userDataPath, 'User')); }
 
@@ -68,8 +72,10 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 	@memoize
 	get userDataSyncHome(): URI { return joinPath(this.userRoamingDataHome, 'sync'); }
 
+	// 存放日志的目录，含有当时日期时间命名的子目录
 	get logsPath(): string {
 		if (!this.args.logsPath) {
+			// 以当前日期时间生成子目录名
 			const key = toLocalISOString(new Date()).replace(/-|:|\.\d+Z$/g, '');
 			this.args.logsPath = join(this.userDataPath, 'logs', key);
 		}
@@ -83,6 +89,7 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 	@memoize
 	get sync(): 'on' | 'off' | undefined { return this.args.sync; }
 
+	// 机器设置文件，用于 remote 服务端环境
 	@memoize
 	get machineSettingsResource(): URI { return joinPath(URI.file(join(this.userDataPath, 'Machine')), 'settings.json'); }
 
@@ -98,6 +105,7 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 	@memoize
 	get keyboardLayoutResource(): URI { return joinPath(this.userRoamingDataHome, 'keyboardLayout.json'); }
 
+	// 版本无关的全局配置文件，Windows 下是用户 HOME 目录下的 .vscode/argv.json
 	@memoize
 	get argvResource(): URI {
 		const vscodePortable = env['VSCODE_PORTABLE'];
@@ -114,12 +122,14 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 	@memoize
 	get isExtensionDevelopment(): boolean { return !!this.args.extensionDevelopmentPath; }
 
+	// 未命名工作区的目录
 	@memoize
 	get untitledWorkspacesHome(): URI { return URI.file(join(this.userDataPath, 'Workspaces')); }
 
 	@memoize
 	get installSourcePath(): string { return join(this.userDataPath, 'installSource'); }
 
+	// 内置扩展的目录
 	@memoize
 	get builtinExtensionsPath(): string {
 		const cliBuiltinExtensionsDir = this.args['builtin-extensions-dir'];
@@ -130,6 +140,7 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 		return normalize(join(FileAccess.asFileUri('', require).fsPath, '..', 'extensions'));
 	}
 
+	// 扩展下载的目录
 	get extensionsDownloadPath(): string {
 		const cliExtensionsDownloadDir = this.args['extensions-download-dir'];
 		if (cliExtensionsDownloadDir) {
@@ -139,6 +150,7 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 		return join(this.userDataPath, 'CachedExtensionVSIXs');
 	}
 
+	// 非内置扩展的目录
 	@memoize
 	get extensionsPath(): string {
 		const cliExtensionsDir = this.args['extensions-dir'];
@@ -156,6 +168,7 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 			return join(vscodePortable, 'extensions');
 		}
 
+		// Windows 下是用户 HOME 目录下的 .vscode/extensions 目录
 		return joinPath(this.userHome, this.productService.dataFolderName, 'extensions').fsPath;
 	}
 
@@ -217,10 +230,11 @@ export abstract class AbstractNativeEnvironmentService implements INativeEnviron
 	get debugExtensionHost(): IExtensionHostDebugParams { return parseExtensionHostPort(this.args, this.isBuilt); }
 	get debugRenderer(): boolean { return !!this.args.debugRenderer; }
 
-	get isBuilt(): boolean { return !env['VSCODE_DEV']; }
+	get isBuilt(): boolean { return !env['VSCODE_DEV']; } // 非开发
 	get verbose(): boolean { return !!this.args.verbose; }
 	get logLevel(): string | undefined { return this.args.log; }
 
+	// 存储 machine id 的文件路径
 	@memoize
 	get serviceMachineIdResource(): URI { return joinPath(URI.file(this.userDataPath), 'machineid'); }
 

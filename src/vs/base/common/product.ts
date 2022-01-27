@@ -30,8 +30,9 @@ export type ExtensionVirtualWorkspaceSupport = {
 	readonly override?: boolean
 };
 
+// 定义 product.json 配置类型
 export interface IProductConfiguration {
-	readonly version: string;
+	readonly version: string; // 产品版本号
 	readonly date?: string;
 	readonly quality?: string;
 	readonly commit?: string;

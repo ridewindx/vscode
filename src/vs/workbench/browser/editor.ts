@@ -75,8 +75,10 @@ export class EditorPaneDescriptor implements IEditorPaneDescriptor {
 export class EditorPaneRegistry implements IEditorPaneRegistry {
 
 	private readonly editorPanes: EditorPaneDescriptor[] = [];
+	// 哪种 editor pane 和哪些种 editor input 映射；有可能某种 editor pane 映射多种 editor input
 	private readonly mapEditorPanesToEditors = new Map<EditorPaneDescriptor, readonly SyncDescriptor<EditorInput>[]>();
 
+	// 所有 editor pane 和哪些 editor input 的映射都要在这里注册
 	registerEditorPane(editorPaneDescriptor: EditorPaneDescriptor, editorDescriptors: readonly SyncDescriptor<EditorInput>[]): IDisposable {
 		this.mapEditorPanesToEditors.set(editorPaneDescriptor, editorDescriptors);
 
@@ -88,6 +90,7 @@ export class EditorPaneRegistry implements IEditorPaneRegistry {
 		});
 	}
 
+	// 根据 editor input 查找 editor pane
 	getEditorPane(editor: EditorInput): EditorPaneDescriptor | undefined {
 		const descriptors = this.findEditorPaneDescriptors(editor);
 
@@ -99,6 +102,7 @@ export class EditorPaneRegistry implements IEditorPaneRegistry {
 			return descriptors[0];
 		}
 
+		// 返回注册了此 editor 且最偏好的 editor pane
 		return editor.prefersEditorPane(descriptors);
 	}
 
@@ -112,6 +116,7 @@ export class EditorPaneRegistry implements IEditorPaneRegistry {
 
 				// Direct check on constructor type (ignores prototype chain)
 				if (!byInstanceOf && editor.constructor === editorClass) {
+					// 类型直接匹配的查找是优先级高的
 					matchingEditorPaneDescriptors.push(editorPane);
 					break;
 				}
@@ -126,6 +131,7 @@ export class EditorPaneRegistry implements IEditorPaneRegistry {
 
 		// If no descriptors found, continue search using instanceof and prototype chain
 		if (!byInstanceOf && matchingEditorPaneDescriptors.length === 0) {
+			// instanceof 方式的查找是优先级低的
 			return this.findEditorPaneDescriptors(editor, true);
 		}
 

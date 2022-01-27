@@ -86,9 +86,9 @@ export interface WebviewOptions {
 	/**
 	 * The purpose of the webview; this is (currently) only used for filtering in js-debug
 	 */
-	readonly purpose?: WebviewContentPurpose;
-	readonly customClasses?: string;
-	readonly enableFindWidget?: boolean;
+	readonly purpose?: WebviewContentPurpose; // 此 webview 承载内容类型
+	readonly customClasses?: string; // 此 webview 的 iframe 的额外类名列表
+	readonly enableFindWidget?: boolean; // 是否使能查找 Widget
 	readonly tryRestoreScrollPosition?: boolean;
 	readonly retainContextWhenHidden?: boolean;
 	transformCssVariables?(styles: WebviewStyles): WebviewStyles;
@@ -115,11 +115,17 @@ export interface WebviewContentOptions {
 
 	/**
 	 * Set of root paths from which the webview can load local resources.
+	 * 允许 webview 加载本地资源的根路径
 	 */
 	readonly localResourceRoots?: readonly URI[];
 
 	/**
 	 * Set of localhost port mappings to apply inside the webview.
+	 * 端口映射，用于 remote 模式时访问扩展建立的 localhost web server
+	 * 此时扩展运行在 remote 环境中，localhost web server 也运行在 remote 环境中
+	 * 而 webview 是在本地 VS Code 中打开，访问 localhost 的 URL 时就会出错
+	 * 因此端口映射能把访问 localhost 的端口重定向为访问 remote 环境中 localhost web server 的端口
+	 * 当然也会把 authority 从 localhost 改为 remote 环境的
 	 */
 	readonly portMapping?: readonly IWebviewPortMapping[];
 
@@ -144,8 +150,8 @@ export function areWebviewContentOptionsEqual(a: WebviewContentOptions, b: Webvi
 }
 
 export interface WebviewExtensionDescription {
-	readonly location?: URI;
-	readonly id: ExtensionIdentifier;
+	readonly location?: URI; // 扩展所在位置，本地的或远程的
+	readonly id: ExtensionIdentifier; // 扩展 id
 }
 
 export interface IDataLinkClickEvent {
@@ -211,9 +217,11 @@ export interface IWebview extends IDisposable {
 export interface IWebviewElement extends IWebview {
 	/**
 	 * Append the webview to a HTML element.
+	 * 把这个 webview 添加为 parent 的子 HTML 元素
 	 *
 	 * Note that the webview content will be destroyed if any part of the parent hierarchy
 	 * changes. You can avoid this by using a {@link IOverlayWebview} instead.
+	 * 若 parent 元素的层次结构发生改变，此 webview 会被销毁
 	 *
 	 * @param parent Element to append the webview to.
 	 */
@@ -263,7 +271,9 @@ export interface IOverlayWebview extends IWebview {
 	 *
 	 * @param element Element to position the webview on top of. This element should
 	 *   be an placeholder for the webview since the webview will entirely cover it.
+	 *   完全覆盖 webview 元素在指定的 element 这个占位符元素上
 	 * @param dimension Optional explicit dimensions to use for sizing the webview.
+	 * 可选的长宽尺寸；若空，则实用 element 的长宽
 	 */
 	layoutWebviewOverElement(element: HTMLElement, dimension?: Dimension): void;
 }

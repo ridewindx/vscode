@@ -18,6 +18,9 @@ import { IProductService } from 'vs/platform/product/common/productService';
 import { hash, IOnDidTerminateSharedProcessWorkerProcess, ISharedProcessWorkerConfiguration, ISharedProcessWorkerProcessExit, ISharedProcessWorkerService } from 'vs/platform/sharedProcess/common/sharedProcessWorkerService';
 import { SharedProcessWorkerMessages, ISharedProcessToWorkerMessage, IWorkerToSharedProcessMessage, ISharedProcessWorkerEnvironment } from 'vs/platform/sharedProcess/electron-browser/sharedProcessWorker';
 
+// Shared Process 的工作线程/进程管理服务
+// 工作线程是 Web Worker，对应同一个要加载执行的模块；可以管理多个工作进程
+// 工作进程是 fork 出来的，对应同一个窗口，加载执行所属 Web Worker 对应的模块
 export class SharedProcessWorkerService implements ISharedProcessWorkerService {
 
 	declare readonly _serviceBrand: undefined;
@@ -39,6 +42,7 @@ export class SharedProcessWorkerService implements ISharedProcessWorkerService {
 		this.logService.trace(`SharedProcess: createWorker (${workerLogId})`);
 
 		// Ensure to dispose any existing process for config
+		// 对于同一个窗口要创建加载同一模块的 worker，则把已存在的终止
 		const configurationHash = hash(configuration);
 		if (this.processeDisposables.has(configurationHash)) {
 			this.logService.warn(`SharedProcess: createWorker found an existing worker that will be terminated (${workerLogId})`);
@@ -97,6 +101,7 @@ export class SharedProcessWorkerService implements ISharedProcessWorkerService {
 		workerPort = port2;
 
 		// Spawn in worker and pass over port
+		// 创建新的 Worker 工作线程
 		await worker.spawn(configuration, workerPort, cts.token);
 
 		if (cts.token.isCancellationRequested) {
@@ -117,6 +122,8 @@ export class SharedProcessWorkerService implements ISharedProcessWorkerService {
 		// keep 1 web-worker per process module id to reduce
 		// the overall number of web workers while still
 		// keeping workers for separate processes around.
+		// 对于同一个要加载的模块，只有一个 Worker 工作线程
+		// 但这个工作线程可以为不同窗口 fork 一个工作进程
 		let webWorkerPromise = this.workers.get(configuration.process.moduleId);
 
 		// create a new web worker if this is the first time
@@ -179,6 +186,8 @@ class SharedProcessWebWorker extends Disposable {
 	private doInit(): Promise<Worker> {
 		const readyPromise = new DeferredPromise<Worker>();
 
+		// 创建 Web Worker 实例，它其实是新建工作线程，脚本为 src/vs/base/worker/workerMain.ts
+		// workerMain.ts 是加载脚本，后面发送第一条消息给它，它会当作模块路径去加载执行
 		const worker = new Worker('../../../base/worker/workerMain.js', {
 			name: `Shared Process Worker (${this.type})`
 		});
@@ -198,7 +207,7 @@ class SharedProcessWebWorker extends Disposable {
 
 				// Lifecycle: Ready
 				case SharedProcessWorkerMessages.Ready:
-					readyPromise.complete(worker);
+					readyPromise.complete(worker); // sharedProcessWorkerMain.ts 发来的 Ready 消息
 					break;
 
 				// Lifecycle: Ack
@@ -248,6 +257,8 @@ class SharedProcessWebWorker extends Disposable {
 		};
 
 		// First message triggers the load of the worker
+		// 给 workerMain.ts 发送的第一条消息是让它要加载的模块的路径
+		// 这里加载的 sharedProcessWorkerMain，每次收到 spawn 消息时，它会 fork 一个子进程执行指定的模块
 		worker.postMessage('vs/platform/sharedProcess/electron-browser/sharedProcessWorkerMain');
 
 		return readyPromise.p;
@@ -265,6 +276,7 @@ class SharedProcessWebWorker extends Disposable {
 			// Store the awaiter for resolving when message
 			// is received with the given nonce
 			const nonce = generateUuid();
+			// 收到响应时会 resolve
 			this.mapMessageNonceToPendingMessageResolve.set(nonce, resolve);
 
 			// Post message into worker

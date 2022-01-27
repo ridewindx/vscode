@@ -10,12 +10,14 @@ import { IAddress } from 'vs/platform/remote/common/remoteAgentConnection';
 import { extractLocalHostUriMetaDataForPortMapping, ITunnelService, RemoteTunnel } from 'vs/platform/tunnel/common/tunnel';
 
 export interface IWebviewPortMapping {
-	readonly webviewPort: number;
-	readonly extensionHostPort: number;
+	readonly webviewPort: number; // webview 直接访问的本地 port
+	readonly extensionHostPort: number; // 扩展 start 的 web server 的 port
 }
 
 /**
  * Manages port mappings for a single webview.
+ * 为统一访问本地扩展和远程扩展 start 的 web server，建立端口映射
+ * 见 https://code.visualstudio.com/api/advanced-topics/remote-extensions#option-2-use-a-port-mapping
  */
 export class WebviewPortMappingManager implements IDisposable {
 
@@ -35,20 +37,24 @@ export class WebviewPortMappingManager implements IDisposable {
 		}
 
 		for (const mapping of this._getMappings()) {
-			if (mapping.webviewPort === requestLocalHostInfo.port) {
+			if (mapping.webviewPort === requestLocalHostInfo.port) { // 找到要访问的 webview 的 port
 				const extensionLocation = this._getExtensionLocation();
-				if (extensionLocation && extensionLocation.scheme === Schemas.vscodeRemote) {
+				if (extensionLocation && extensionLocation.scheme === Schemas.vscodeRemote) { // 若是远程环境的扩展
+					// 建立和远程扩展的 web server 的通信隧道
 					const tunnel = resolveAuthority && await this.getOrCreateTunnel(resolveAuthority, mapping.extensionHostPort);
 					if (tunnel) {
 						if (tunnel.tunnelLocalPort === mapping.webviewPort) {
+							// 如果恰好等于 webview 的 port，那就不用改
 							return undefined;
 						}
+						// 改为访问隧道的本地 port
 						return encodeURI(uri.with({
 							authority: `127.0.0.1:${tunnel.tunnelLocalPort}`,
 						}).toString(true));
 					}
 				}
 
+				// 若是非远程扩展的情况，改为访问扩展的本地 port
 				if (mapping.webviewPort !== mapping.extensionHostPort) {
 					return encodeURI(uri.with({
 						authority: `${requestLocalHostInfo.address}:${mapping.extensionHostPort}`

@@ -59,11 +59,12 @@ export interface IWorkspacesManagementMainService {
 	getWorkspaceIdentifier(workspacePath: URI): Promise<IWorkspaceIdentifier>;
 }
 
+// 工作区管理服务，仅限于管理 multi-root 工作区
 export class WorkspacesManagementMainService extends Disposable implements IWorkspacesManagementMainService {
 
 	declare readonly _serviceBrand: undefined;
 
-	private readonly untitledWorkspacesHome = this.environmentMainService.untitledWorkspacesHome; // local URI that contains all untitled workspaces
+	private readonly untitledWorkspacesHome = this.environmentMainService.untitledWorkspacesHome; // local URI that contains all untitled workspaces 用户数据目录下的 Workspaces 目录
 
 	private readonly _onDidDeleteUntitledWorkspace = this._register(new Emitter<IWorkspaceIdentifier>());
 	readonly onDidDeleteUntitledWorkspace: Event<IWorkspaceIdentifier> = this._onDidDeleteUntitledWorkspace.event;
@@ -113,6 +114,7 @@ export class WorkspacesManagementMainService extends Disposable implements IWork
 	}
 
 	private isWorkspacePath(uri: URI): boolean {
+		// 要么在 untitledWorkspacesHome 目录下，要么有正确的后缀名
 		return isUntitledWorkspace(uri, this.environmentMainService) || hasWorkspaceFileExtension(uri);
 	}
 
@@ -170,8 +172,10 @@ export class WorkspacesManagementMainService extends Disposable implements IWork
 	}
 
 	private newUntitledWorkspace(folders: IWorkspaceFolderCreationData[] = [], remoteAuthority?: string): { workspace: IWorkspaceIdentifier, storedWorkspace: IStoredWorkspace } {
+		// untitled 的工作区会有个目录，目录名其实就是创建时间的毫秒数（多加了 1000ms 以内的随机数）
 		const randomId = (Date.now() + Math.round(Math.random() * 1000)).toString();
 		const untitledWorkspaceConfigFolder = joinPath(this.untitledWorkspacesHome, randomId);
+		// 目录下面有个 workspace.json 文件
 		const untitledWorkspaceConfigPath = joinPath(untitledWorkspaceConfigFolder, UNTITLED_WORKSPACE_NAME);
 
 		const storedWorkspaceFolder: IStoredWorkspaceFolder[] = [];
@@ -220,6 +224,7 @@ export class WorkspacesManagementMainService extends Disposable implements IWork
 			// Mark Workspace Storage to be deleted
 			const workspaceStoragePath = join(this.environmentMainService.workspaceStorageHome.fsPath, workspace.id);
 			if (existsSync(workspaceStoragePath)) {
+				// 创建一个名为 obsolete 的文件，表示为废弃可删除
 				writeFileSync(join(workspaceStoragePath, 'obsolete'), '');
 			}
 		} catch (error) {
@@ -249,6 +254,7 @@ export class WorkspacesManagementMainService extends Disposable implements IWork
 		return untitledWorkspaces;
 	}
 
+	// 在指定的 window 窗口中打开指定工作区配置文件的工作区
 	async enterWorkspace(window: ICodeWindow, windows: ICodeWindow[], path: URI): Promise<IEnterWorkspaceResult | undefined> {
 		if (!window || !window.win || !window.isReady) {
 			return undefined; // return early if the window is not ready or disposed
@@ -309,10 +315,12 @@ export class WorkspacesManagementMainService extends Disposable implements IWork
 		// Register window for backups and migrate current backups over
 		let backupPath: string | undefined;
 		if (!window.config.extensionDevelopmentPath) {
+			// 为这个工作区注册备份路径
 			backupPath = this.backupMainService.registerWorkspaceBackupSync({ workspace, remoteAuthority: window.remoteAuthority }, window.config.backupPath);
 		}
 
 		// if the window was opened on an untitled workspace, delete it.
+		// 若此窗口目前是打开的 untitled 工作区，则删除这个 untitled 工作区
 		if (isWorkspaceIdentifier(window.openedWorkspace) && this.isUntitledWorkspace(window.openedWorkspace)) {
 			this.deleteUntitledWorkspaceSync(window.openedWorkspace);
 		}

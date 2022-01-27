@@ -61,6 +61,7 @@ function _referenceResolution(scheme: string, path: string): string {
 	// support constructing URIs relative to other URIs. This
 	// also means that we alter and potentially break paths.
 	// see https://tools.ietf.org/html/rfc3986#section-5.1.4
+	// 对于 https/http/file，path 必须以 / 开头
 	switch (scheme) {
 		case 'https':
 		case 'http':

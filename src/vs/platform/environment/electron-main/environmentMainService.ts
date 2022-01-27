@@ -26,6 +26,7 @@ export interface IEnvironmentMainService extends INativeEnvironmentService {
 	backupWorkspacesPath: string;
 
 	// --- V8 code caching
+	// V8 缓存脚本解析编译结果，以加速后续执行
 	codeCachePath: string | undefined;
 	useCodeCache: boolean;
 
@@ -50,6 +51,7 @@ export class EnvironmentMainService extends NativeEnvironmentService implements 
 	@memoize
 	get backupWorkspacesPath(): string { return join(this.backupHome, 'workspaces.json'); }
 
+	// 主进程 IPC 句柄文件路径
 	@memoize
 	get mainIPCHandle(): string { return createStaticIPCHandle(this.userDataPath, 'main', this.productService.version); }
 

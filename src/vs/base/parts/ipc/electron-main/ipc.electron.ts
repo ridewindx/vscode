@@ -30,6 +30,7 @@ export class Server extends IPCServer {
 	private static readonly Clients = new Map<number, IDisposable>();
 
 	private static getOnDidClientConnect(): Event<ClientConnectionEvent> {
+		// 渲染进程发来 vscode:hello 就是建立客户端连接
 		const onHello = Event.fromNodeEventEmitter<WebContents>(ipcMain, 'vscode:hello', ({ sender }) => sender);
 
 		return Event.map(onHello, webContents => {
@@ -37,7 +38,7 @@ export class Server extends IPCServer {
 			const client = Server.Clients.get(id);
 
 			if (client) {
-				client.dispose();
+				client.dispose(); // 销毁老的连接
 			}
 
 			const onDidClientReconnect = new Emitter<void>();

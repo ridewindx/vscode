@@ -120,6 +120,9 @@ export interface ISandboxContext {
 	resolveConfiguration(): Promise<ISandboxConfiguration>;
 }
 
+// 导出一些在沙盒化 Render 进程中可用的对象
+// 参见 https://www.electronjs.org/zh/docs/latest/api/ipc-renderer
+// src/vs/base/parts/sandbox/electron-browser/preload.js
 export const ipcRenderer: IpcRenderer = globals.vscode.ipcRenderer;
 export const ipcMessagePort: IpcMessagePort = globals.vscode.ipcMessagePort;
 export const webFrame: WebFrame = globals.vscode.webFrame;

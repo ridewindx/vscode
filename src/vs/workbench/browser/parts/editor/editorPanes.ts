@@ -72,19 +72,20 @@ export class EditorPanes extends Disposable {
 	get maximumWidth() { return this._activeEditorPane?.maximumWidth ?? DEFAULT_EDITOR_MAX_DIMENSIONS.width; }
 	get maximumHeight() { return this._activeEditorPane?.maximumHeight ?? DEFAULT_EDITOR_MAX_DIMENSIONS.height; }
 
+	// 当前 active 的 editor pane
 	private _activeEditorPane: EditorPane | null = null;
 	get activeEditorPane(): IVisibleEditorPane | null { return this._activeEditorPane as IVisibleEditorPane | null; }
 
 	private readonly editorPanes: EditorPane[] = [];
 
 	private readonly activeEditorPaneDisposables = this._register(new DisposableStore());
-	private dimension: Dimension | undefined;
+	private dimension: Dimension | undefined; // 此 EditorPanes 的 UI 的长宽
 	private readonly editorOperation = this._register(new LongRunningOperation(this.editorProgressService));
 	private readonly editorPanesRegistry = Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane);
 
 	constructor(
 		private parent: HTMLElement,
-		private groupView: IEditorGroupView,
+		private groupView: IEditorGroupView, // 此 EditorPanes 实例所在的 group
 		@IWorkbenchLayoutService private readonly layoutService: IWorkbenchLayoutService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IEditorProgressService private readonly editorProgressService: IEditorProgressService,

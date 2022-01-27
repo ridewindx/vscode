@@ -11,6 +11,7 @@ import { IEnterWorkspaceResult, IRecent, IRecentlyOpened, IWorkspaceBackupInfo, 
 import { IWorkspacesHistoryMainService } from 'vs/platform/workspaces/electron-main/workspacesHistoryMainService';
 import { IWorkspacesManagementMainService } from 'vs/platform/workspaces/electron-main/workspacesManagementMainService';
 
+// 注意这里 AddFirstParameterToFunctions 是把要实现的接口的方法都加上了第一个参数 window id
 export class WorkspacesMainService implements AddFirstParameterToFunctions<IWorkspacesService, Promise<unknown> /* only methods, not events */, number /* window ID */> {
 
 	declare readonly _serviceBrand: undefined;

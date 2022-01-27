@@ -27,6 +27,7 @@ export class Server extends IPCServer {
 		return Event.map(onCreateMessageChannel, nonce => {
 
 			// Create a new pair of ports and protocol for this connection
+			// 创建两个 MessagePort
 			const { port1: incomingPort, port2: outgoingPort } = new MessageChannel();
 			const protocol = new MessagePortProtocol(incomingPort);
 

@@ -25,13 +25,13 @@ export enum LogLevel {
 	Warning,
 	Error,
 	Critical,
-	Off
+	Off // 关闭日志打印
 }
 
-export const DEFAULT_LOG_LEVEL: LogLevel = LogLevel.Info;
+export const DEFAULT_LOG_LEVEL: LogLevel = LogLevel.Info; // 默认日志级别为 Info
 
 export interface ILogger extends IDisposable {
-	onDidChangeLogLevel: Event<LogLevel>;
+	onDidChangeLogLevel: Event<LogLevel>; // 更改日志级别时触发事件
 	getLevel(): LogLevel;
 	setLevel(level: LogLevel): void;
 
@@ -68,11 +68,11 @@ export function format(args: any): string {
 
 		if (typeof a === 'object') {
 			try {
-				a = JSON.stringify(a);
+				a = JSON.stringify(a); // 将 object 进行 JSON 序列化
 			} catch (e) { }
 		}
 
-		result += (i > 0 ? ' ' : '') + a;
+		result += (i > 0 ? ' ' : '') + a; // 空格分隔
 	}
 
 	return result;
@@ -204,7 +204,7 @@ export class ConsoleMainLogger extends AbstractLogger implements ILogger {
 	constructor(logLevel: LogLevel = DEFAULT_LOG_LEVEL) {
 		super();
 		this.setLevel(logLevel);
-		this.useColors = !isWindows;
+		this.useColors = !isWindows; // 非 Windows 环境下使用彩色
 	}
 
 	trace(message: string, ...args: any[]): void {
@@ -389,13 +389,14 @@ export class AdapterLogger extends AbstractLogger implements ILogger {
 	}
 }
 
+// 输出日志到多个 logger
 export class MultiplexLogService extends AbstractLogger implements ILogService {
 	declare readonly _serviceBrand: undefined;
 
 	constructor(private readonly logServices: ReadonlyArray<ILogger>) {
 		super();
 		if (logServices.length) {
-			this.setLevel(logServices[0].getLevel());
+			this.setLevel(logServices[0].getLevel()); // 统一设置所有 logger 的日志级别为第一个 logger 的日志级别
 		}
 	}
 
@@ -512,8 +513,8 @@ export abstract class AbstractLoggerService extends Disposable implements ILogge
 	private readonly logLevelChangeableLoggers: ILogger[] = [];
 
 	constructor(
-		private logLevel: LogLevel,
-		onDidChangeLogLevel: Event<LogLevel>,
+		private logLevel: LogLevel, // 日志级别，创建 logger 时会设置为它
+		onDidChangeLogLevel: Event<LogLevel>, // 日志级别事件发生时会改变日志级别
 	) {
 		super();
 		this._register(onDidChangeLogLevel(logLevel => {
@@ -565,7 +566,7 @@ export class NullLogService implements ILogService {
 
 export function getLogLevel(environmentService: IEnvironmentService): LogLevel {
 	if (environmentService.verbose) {
-		return LogLevel.Trace;
+		return LogLevel.Trace; // verbose 对应 trace
 	}
 	if (typeof environmentService.logLevel === 'string') {
 		const logLevel = parseLogLevel(environmentService.logLevel.toLowerCase());
@@ -576,6 +577,7 @@ export function getLogLevel(environmentService: IEnvironmentService): LogLevel {
 	return DEFAULT_LOG_LEVEL;
 }
 
+// 只能解析小写字符串
 export function parseLogLevel(logLevel: string): LogLevel | undefined {
 	switch (logLevel) {
 		case 'trace':

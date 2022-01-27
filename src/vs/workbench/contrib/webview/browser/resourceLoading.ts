@@ -42,6 +42,7 @@ export namespace WebviewResourceResponse {
 	export type StreamResponse = StreamSuccess | typeof Failed | typeof AccessDenied | NotModified;
 }
 
+// 从文件服务加载本地资源
 export async function loadLocalResource(
 	requestUri: URI,
 	options: {

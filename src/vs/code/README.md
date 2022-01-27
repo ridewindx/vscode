@@ -1,0 +1,6 @@
+- electron-main 应用入口
+  - main.ts 中的 CodeMain
+  - app.ts 中的 CodeApplication
+- VS Code 主窗口
+  - electron-browser/workbench 桌面端 Workbench 窗口
+  - browser/workbench Web 端 Workbench 窗口

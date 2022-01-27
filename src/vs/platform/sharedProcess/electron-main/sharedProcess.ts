@@ -22,6 +22,10 @@ import { IThemeMainService } from 'vs/platform/theme/electron-main/themeMainServ
 import { WindowError } from 'vs/platform/windows/electron-main/windows';
 import { toErrorMessage } from 'vs/base/common/errorMessage';
 
+// Shared Process 实例，管理 Shared Process 渲染窗口
+// 渲染进程加载的是 vs/code/electron-browser/sharedProcess
+// 它不仅有自己的一些周期任务，而且管理 worker 线程/进程
+// 其他渲染窗口是可以向 Shared Process 进程请求创建 worker 进程，加载执行指定的模块
 export class SharedProcess extends Disposable implements ISharedProcess {
 
 	private readonly firstWindowConnectionBarrier = new Barrier();
@@ -72,6 +76,7 @@ export class SharedProcess extends Disposable implements ISharedProcess {
 		await this.whenReady();
 
 		// connect to the shared process window
+		// 建立一条到 Shared Process 的 IPC 连接
 		const port = await this.connect();
 
 		// Check back if the requesting window meanwhile closed
@@ -83,6 +88,8 @@ export class SharedProcess extends Disposable implements ISharedProcess {
 		}
 
 		// send the port back to the requesting window
+		// 把 MessagePortMain 传回给 renderer 进程
+		// 注意这里回传 nonce 是为了让 renderer 进程匹配请求和响应
 		e.sender.postMessage('vscode:createSharedProcessMessageChannelResult', nonce, [port]);
 	}
 
@@ -216,6 +223,7 @@ export class SharedProcess extends Disposable implements ISharedProcess {
 		this.window = new BrowserWindow({
 			show: false,
 			backgroundColor: this.themeMainService.getBackgroundColor(),
+			// 这里配置的权限比较高，以让 Shared Process 渲染进程可以调用 Node.js 的 API
 			webPreferences: {
 				preload: FileAccess.asFileUri('vs/base/parts/sandbox/electron-browser/preload.js', require).fsPath,
 				additionalArguments: [`--vscode-window-config=${configObjectUrl.resource.toString()}`, '--vscode-window-kind=shared-process'],
@@ -258,6 +266,7 @@ export class SharedProcess extends Disposable implements ISharedProcess {
 			this.logService.trace('SharedProcess#close prevented');
 
 			// We never allow to close the shared process unless we get explicitly disposed()
+			// 阻止窗口 close
 			e.preventDefault();
 
 			// Still hide the window though if visible
@@ -286,6 +295,7 @@ export class SharedProcess extends Disposable implements ISharedProcess {
 		return connectMessagePort(window);
 	}
 
+	// 打开或关闭 SharedProcess 窗口及其 Developer Tools 窗口
 	async toggle(): Promise<void> {
 
 		// wait for window to be created

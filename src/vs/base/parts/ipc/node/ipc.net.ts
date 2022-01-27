@@ -723,6 +723,7 @@ export function createRandomIPCHandle(): string {
 }
 
 export function createStaticIPCHandle(directoryPath: string, type: string, version: string): string {
+	// directoryPath 是用户数据目录，这里使用哈希使得对于不同的用户数据目录，会生成不同的 IPC 句柄文件名
 	const scope = createHash('md5').update(directoryPath).digest('hex');
 
 	// Windows: use named pipe
@@ -737,6 +738,8 @@ export function createStaticIPCHandle(directoryPath: string, type: string, versi
 	if (XDG_RUNTIME_DIR && !process.env['VSCODE_PORTABLE']) {
 		result = join(XDG_RUNTIME_DIR, `vscode-${scope.substr(0, 8)}-${version}-${type}.sock`);
 	} else {
+		// 对于没有 XDG_RUNTIME_DIR 或在移植模式下的情况，直接存到用户数据目录下面
+		// 也就无需哈希了
 		result = join(directoryPath, `${version}-${type}.sock`);
 	}
 

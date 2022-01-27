@@ -18,6 +18,7 @@ class Node<E> {
 	}
 }
 
+// 链表
 export class LinkedList<E> {
 
 	private _first: Node<E> = Node.Undefined;
@@ -46,10 +47,12 @@ export class LinkedList<E> {
 		this._size = 0;
 	}
 
+	// 从链首添加元素，返回删除此元素的函数
 	unshift(element: E): () => void {
 		return this._insert(element, false);
 	}
 
+	// 从链尾添加元素，返回删除此元素的函数
 	push(element: E): () => void {
 		return this._insert(element, true);
 	}

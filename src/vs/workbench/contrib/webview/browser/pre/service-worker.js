@@ -22,7 +22,7 @@ const searchParams = new URL(location.toString()).searchParams;
  */
 const resourceBaseAuthority = searchParams.get('vscode-resource-base-authority');
 
-const resolveTimeout = 30000;
+const resolveTimeout = 30000; // 30s
 
 /**
  * @template T
@@ -251,6 +251,7 @@ async function processResourceRequest(event, requestUrl) {
 		});
 
 		if (shouldTryCaching && entry.etag) {
+			// 缓存
 			caches.open(resourceCacheName).then(cache => {
 				return cache.put(event.request, response);
 			});

@@ -238,6 +238,7 @@ export function registerThemingParticipant(participant: IThemingParticipant): ID
 
 /**
  * Utility base class for all themable components.
+ * 所有可主题化组件的基类
  */
 export class Themable extends Disposable {
 	protected theme: IColorTheme;

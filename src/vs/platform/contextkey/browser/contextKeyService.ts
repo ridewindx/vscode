@@ -23,7 +23,7 @@ export class Context implements IContext {
 
 	constructor(id: number, parent: Context | null) {
 		this._id = id;
-		this._parent = parent;
+		this._parent = parent; // 若有父上下文，则取键值的时候也会回退到从父上下文中获取
 		this._value = Object.create(null);
 		this._value['_contextId'] = id;
 	}
@@ -191,7 +191,7 @@ class ContextKey<T> implements IContextKey<T> {
 	constructor(service: AbstractContextKeyService, key: string, defaultValue: T | undefined) {
 		this._service = service;
 		this._key = key;
-		this._defaultValue = defaultValue;
+		this._defaultValue = defaultValue; // 每次 reset 后的默认值；若是 undefined，则表示不存在此上下文键
 		this.reset();
 	}
 
@@ -335,6 +335,7 @@ export abstract class AbstractContextKeyService implements IContextKeyService {
 		}
 	}
 
+	// 给定 HTMLElement 元素，从它到其父元素一路查找设置的属性里面含有的上下文 id，返回对应的上下文对象
 	public getContext(target: IContextKeyServiceTarget | null): IContext {
 		if (this._isDisposed) {
 			return NullContext.INSTANCE;
@@ -343,7 +344,7 @@ export abstract class AbstractContextKeyService implements IContextKeyService {
 	}
 
 	public abstract getContextValuesContainer(contextId: number): Context;
-	public abstract createChildContext(parentContextId?: number): number;
+	public abstract createChildContext(parentContextId?: number): number; // 创建子上下文，返回其 id
 	public abstract disposeContext(contextId: number): void;
 	public abstract updateParent(parentContextKeyService?: IContextKeyService): void;
 }
@@ -418,7 +419,7 @@ class ScopedContextKeyService extends AbstractContextKeyService {
 
 	constructor(parent: AbstractContextKeyService, domNode: IContextKeyServiceTarget) {
 		super(parent.createChildContext());
-		this._parent = parent;
+		this._parent = parent; // 父上下文键服务
 		this._updateParentChangeListener();
 
 		this._domNode = domNode;
@@ -499,10 +500,11 @@ class OverlayContext implements IContext {
 	}
 }
 
+// 附加了一些优先的上下文键值对的上下文键服务
 class OverlayContextKeyService implements IContextKeyService {
 
 	declare _serviceBrand: undefined;
-	private overlay: Map<string, any>;
+	private overlay: Map<string, any>; // 优先的上下文键值对
 
 	get contextId(): number {
 		return this.parent.contextId;

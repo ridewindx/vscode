@@ -15,7 +15,7 @@ import { ISandboxConfiguration } from 'vs/base/parts/sandbox/common/sandboxTypes
  */
 let product: IProductConfiguration;
 
-// Native sandbox environment
+// Native sandbox environment 原生沙盒环境，也即 Electron 渲染进程
 if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.context !== 'undefined') {
 	const configuration: ISandboxConfiguration | undefined = globals.vscode.context.configuration();
 	if (configuration) {
@@ -25,7 +25,7 @@ if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.context !== '
 	}
 }
 
-// Native node.js environment
+// Native node.js environment 原生 Node.js 环境
 else if (typeof require?.__$__nodeRequire === 'function') {
 
 	// Obtain values from product.json and package.json
@@ -34,7 +34,7 @@ else if (typeof require?.__$__nodeRequire === 'function') {
 	product = require.__$__nodeRequire(joinPath(rootPath, 'product.json').fsPath);
 	const pkg = require.__$__nodeRequire(joinPath(rootPath, 'package.json').fsPath) as { version: string; };
 
-	// Running out of sources
+	// Running out of sources 如果在源码中执行，则加上后缀
 	if (env['VSCODE_DEV']) {
 		Object.assign(product, {
 			nameShort: `${product.nameShort} Dev`,
@@ -44,15 +44,17 @@ else if (typeof require?.__$__nodeRequire === 'function') {
 		});
 	}
 
+	// 加上 package.json 中定义的版本号
 	Object.assign(product, {
 		version: pkg.version
 	});
 }
 
 // Web environment or unknown
+// Web 环境
 else {
 
-	// Built time configuration (do NOT modify)
+	// Built time configuration (do NOT modify) 编译时配置？
 	product = { /*BUILD->INSERT_PRODUCT_CONFIGURATION*/ } as IProductConfiguration;
 
 	// Running out of sources

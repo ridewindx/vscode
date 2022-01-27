@@ -50,4 +50,6 @@ class RegistryImpl implements IRegistry {
 	}
 }
 
+// 全局注册点，用于注册扩展可用的函数和属性
+// 此处扩展的含义是扩展任何功能或组件
 export const Registry: IRegistry = new RegistryImpl();

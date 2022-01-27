@@ -33,6 +33,7 @@ export class Codicon implements CSSIcon {
 	private constructor(public readonly id: string, public readonly definition: IconDefinition, public description?: string) {
 		Codicon._allCodicons.push(this);
 	}
+	// CSS 类名
 	public get classNames() { return 'codicon codicon-' + this.id; }
 	// classNamesArray is useful for migrating to ES6 classlist
 	public get classNamesArray() { return ['codicon', 'codicon-' + this.id]; }

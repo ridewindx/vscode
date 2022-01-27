@@ -174,6 +174,7 @@ export class Throttler {
 		this.queuedPromiseFactory = null;
 	}
 
+	// 每次 queue，传入的 promiseFactory 会在等待上次 queue 返回的 promise 被 settle 之后才会执行返回新的 promise
 	queue<T>(promiseFactory: ITask<Promise<T>>): Promise<T> {
 		if (this.activePromise) {
 			this.queuedPromiseFactory = promiseFactory;
@@ -316,6 +317,7 @@ export class Delayer<T> implements IDisposable {
 		this.task = null;
 	}
 
+	// 每次 trigger，都会重新设置 task，且重新开始超时为 delay 的定时器
 	trigger(task: ITask<T | Promise<T>>, delay = this.defaultDelay): Promise<T> {
 		this.task = task;
 		this.cancelTimeout();
@@ -374,6 +376,7 @@ export class Delayer<T> implements IDisposable {
 /**
  * A helper to delay execution of a task that is being requested often, while
  * preventing accumulation of consecutive executions, while the task runs.
+ * 当任务的执行请求连续累积（delay 间隔），或任务正在执行时，延期新的执行
  *
  * The mail man is clever and waits for a certain amount of time, before going
  * out to deliver letters. While the mail man is going out, more letters arrive
@@ -409,6 +412,7 @@ export class ThrottledDelayer<T> {
 
 /**
  * A barrier that is initially closed and then becomes opened permanently.
+ * 障碍，可用于等待某个事情的触发；一旦触发后，任何等待都立即满足
  */
 export class Barrier {
 
@@ -476,6 +480,7 @@ export function timeout(millis: number, token?: CancellationToken): CancelablePr
 	});
 }
 
+// 包装 setTimeout 返回 disposable 可用于取消定时器
 export function disposableTimeout(handler: () => void, timeout = 0): IDisposable {
 	const timer = setTimeout(handler, timeout);
 	return toDisposable(() => clearTimeout(timer));
@@ -590,6 +595,8 @@ export interface ILimiter<T> {
 /**
  * A helper to queue N promises and run them all with a max degree of parallelism. The helper
  * ensures that at any time no more than M promises are running at the same time.
+ * 任何时候只最多并发执行 maxDegreeOfParalellism 个任务
+ * 每次 queue 一个任务可以 await 它的结果
  */
 export class Limiter<T> implements ILimiter<T>{
 
@@ -600,7 +607,7 @@ export class Limiter<T> implements ILimiter<T>{
 	private readonly _onFinished: Emitter<void>;
 
 	constructor(maxDegreeOfParalellism: number) {
-		this.maxDegreeOfParalellism = maxDegreeOfParalellism;
+		this.maxDegreeOfParalellism = maxDegreeOfParalellism; // 最大任务并发度
 		this.outstandingPromises = [];
 		this.runningPromises = 0;
 		this._onFinished = new Emitter<void>();
@@ -652,6 +659,7 @@ export class Limiter<T> implements ILimiter<T>{
 
 /**
  * A queue is handles one promise at a time and guarantees that at any time only one promise is executing.
+ * 任务排队执行，任何时候只最多执行 1 个任务
  */
 export class Queue<T> extends Limiter<T> {
 
@@ -813,6 +821,7 @@ export class IntervalTimer implements IDisposable {
 	}
 }
 
+// 定时执行一次任务，需要调用 schedule() 开始计时
 export class RunOnceScheduler {
 
 	protected runner: ((...args: unknown[]) => void) | null;
@@ -848,6 +857,7 @@ export class RunOnceScheduler {
 
 	/**
 	 * Cancel previous runner (if any) & schedule a new runner.
+	 * 重新设置定时器以延时执行任务；若有之前的定时器还没执行，则取消它
 	 */
 	schedule(delay = this.timeout): void {
 		this.cancel();
@@ -1369,6 +1379,7 @@ export type ValueCallback<T = unknown> = (value: T | Promise<T>) => void;
 
 /**
  * Creates a promise whose resolution or rejection can be controlled imperatively.
+ * 从外部控制 resolve 或 reject 的 promise
  */
 export class DeferredPromise<T> {
 
@@ -1432,6 +1443,7 @@ export namespace Promises {
 	/**
 	 * A drop-in replacement for `Promise.all` with the only difference
 	 * that the method awaits every promise to either fulfill or reject.
+	 * 和 `Promise.all` 不同的是，总是等待所有 promise，即使有 promise 抛错
 	 *
 	 * Similar to `Promise.all`, only the first error will be returned
 	 * if any.

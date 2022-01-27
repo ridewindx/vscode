@@ -1,0 +1,11 @@
+- diff: 文本 Difference 算法
+- marked: Markdown 解析器 https://github.com/markedjs/marked
+- semver: 语义版本控制 https://github.com/npm/node-semver
+- uri: 统一资源定位符，URI 类和 Uri 类，是 VS Code 中对大多数资源的定位的表示
+- path: 文件/目录路径的操作，是从 Node.js 拷贝过来的，可以在非 Node.js 环境中使用
+- process: 类似于 Node.js 中的 process 模块，可以在 Node.js 环境/沙盒环境/ Web 环境中使用
+- json: JSON 扫描器和解析器
+- lifecycle
+- performance: 性能测量
+- types: 类型判断实用函数
+- codicons: VS Code 内置的 icon font 集合，参见 https://github.com/microsoft/vscode-codicons

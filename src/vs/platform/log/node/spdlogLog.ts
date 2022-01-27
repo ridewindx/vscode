@@ -65,7 +65,7 @@ export class SpdLogLogger extends AbstractMessageLogger implements ILogger {
 
 	private async _createSpdLogLogger(name: string, filepath: string, rotating: boolean, donotUseFormatters: boolean): Promise<void> {
 		const filecount = rotating ? 6 : 1;
-		const filesize = (30 / filecount) * ByteSize.MB;
+		const filesize = (30 / filecount) * ByteSize.MB; // 只保留 30MB 的日志量，根据文件数切分每个文件的最大量
 		const logger = await createSpdLogLogger(name, filepath, filesize, filecount, donotUseFormatters);
 		if (logger) {
 			this._logger = logger;

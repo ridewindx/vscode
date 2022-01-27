@@ -23,12 +23,12 @@ export const enum LoadReason {
 	INITIAL = 1,
 
 	/**
-	 * The window is loaded into a different workspace context.
+	 * The window is loaded into a different workspace context. 由于进入另一个工作区而加载窗口
 	 */
 	LOAD,
 
 	/**
-	 * The window is reloaded.
+	 * The window is reloaded. 窗口被重新加载
 	 */
 	RELOAD
 }
@@ -77,6 +77,7 @@ export const enum OpenContext {
 	API
 }
 
+// 窗口的位置、大小、模式等状态
 export interface IWindowState {
 	width?: number;
 	height?: number;
@@ -94,6 +95,7 @@ export const defaultWindowState = function (mode = WindowMode.Normal): IWindowSt
 	};
 };
 
+// 最大化、正常、全屏
 export const enum WindowMode {
 	Maximized,
 	Normal,
@@ -106,6 +108,7 @@ export interface ILoadEvent {
 	reason: LoadReason;
 }
 
+// 窗口
 export interface ICodeWindow extends IDisposable {
 
 	readonly onWillLoad: Event<ILoadEvent>;
@@ -141,7 +144,7 @@ export interface ICodeWindow extends IDisposable {
 	load(config: INativeWindowConfiguration, options?: { isReload?: boolean }): void;
 	reload(cli?: NativeParsedArgs): void;
 
-	focus(options?: { force: boolean }): void;
+	focus(options?: { force: boolean }): void; // 聚焦到此窗口
 	close(): void;
 
 	getBounds(): Rectangle;

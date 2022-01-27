@@ -226,13 +226,16 @@ export interface IExtensionService {
 
 	/**
 	 * Send an activation event and activate interested extensions.
+	 * 发送激活事件以激活对此事件有兴趣的插件们
 	 *
 	 * This will wait for the normal startup of the extension host(s).
+	 * 通常会等待 extension host 启动后
 	 *
 	 * In extraordinary circumstances, if the activation event needs to activate
 	 * one or more extensions before the normal startup is finished, then you can use
 	 * `ActivationKind.Immediate`. Please do not use this flag unless really necessary
 	 * and you understand all consequences.
+	 * 特殊情况下需要在 extension host 正常启动完成前就激活插件，可以使用 ActivationKind.Immediate
 	 */
 	activateByEvent(activationEvent: string, activationKind?: ActivationKind): Promise<void>;
 
@@ -272,6 +275,7 @@ export interface IExtensionService {
 
 	/**
 	 * Get information about extensions status.
+	 * 获取插件们的状态信息
 	 */
 	getExtensionsStatus(): { [id: string]: IExtensionsStatus };
 
@@ -283,16 +287,19 @@ export interface IExtensionService {
 
 	/**
 	 * Stops the extension hosts.
+	 * 停止 extension host
 	 */
 	stopExtensionHosts(): void;
 
 	/**
 	 * Restarts the extension host.
+	 * 重启 extension host
 	 */
 	restartExtensionHost(): Promise<void>;
 
 	/**
 	 * Starts the extension hosts.
+	 * 启动 extension host
 	 */
 	startExtensionHosts(): Promise<void>;
 

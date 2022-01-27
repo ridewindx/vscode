@@ -43,6 +43,7 @@ export class BrowserStorageService extends AbstractStorageService {
 
 		// Create Storage in Parallel
 		const [workspaceStorageDatabase, globalStorageDatabase] = await Promises.settled([
+			// 仅全局 storage 会广播通知变更，而 workspace 级的不会
 			IndexedDBStorageDatabase.create({ id: this.getId(StorageScope.WORKSPACE) }, this.logService),
 			IndexedDBStorageDatabase.create({ id: this.getId(StorageScope.GLOBAL), broadcastChanges: true /* only for global storage */ }, this.logService)
 		]);
@@ -215,6 +216,8 @@ export class IndexedDBStorageDatabase extends Disposable implements IIndexedDBSt
 		super();
 
 		this.name = `${IndexedDBStorageDatabase.STORAGE_DATABASE_PREFIX}${options.id}`;
+		// BroadcastChannel 是浏览器的窗口/tab 页/frame/iframe/worker 间的消息总线，同域下可用
+		// https://developer.mozilla.org/en-US/docs/Web/API/Broadcast_Channel_API
 		this.broadcastChannel = options.broadcastChanges && ('BroadcastChannel' in window) ? new BroadcastChannel(IndexedDBStorageDatabase.STORAGE_BROADCAST_CHANNEL) : undefined;
 
 		this.whenConnected = this.connect();

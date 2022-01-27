@@ -6,6 +6,7 @@
 import * as platform from 'vs/base/common/platform';
 import { URI } from 'vs/base/common/uri';
 
+// 定义了各种支持的 URI 的 scheme
 export namespace Schemas {
 
 	/**
@@ -160,6 +161,9 @@ class RemoteAuthoritiesImpl {
 
 export const RemoteAuthorities = new RemoteAuthoritiesImpl();
 
+// 文件访问 URI 的转换：
+// asBrowserUri 是转换为适合浏览器或 DOM 中的 URI
+// asFileUri 是转换为适合 Node.js 中的 URI
 class FileAccessImpl {
 
 	private static readonly FALLBACK_AUTHORITY = 'vscode-app';

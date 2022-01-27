@@ -102,7 +102,7 @@ import { IV8InspectProfilingService } from 'vs/platform/profiling/common/profili
 
 class SharedProcessMain extends Disposable {
 
-	private server = this._register(new MessagePortServer());
+	private server = this._register(new MessagePortServer()); // IPC 服务端
 
 	private sharedProcessWorkerService: ISharedProcessWorkerService | undefined = undefined;
 
@@ -149,14 +149,14 @@ class SharedProcessMain extends Disposable {
 			// Log info
 			logService.trace('sharedProcess configuration', JSON.stringify(this.configuration));
 
-			// Channels
+			// Channels 注册可供 IPC 客户端调用的 channel
 			this.initChannels(accessor);
 
 			// Error handler
 			this.registerErrorHandler(logService);
 		});
 
-		// Instantiate Contributions
+		// Instantiate Contributions 实例化 contrib 目录下的清理器或更新器
 		this._register(combinedDisposable(
 			instantiationService.createInstance(CodeCacheCleaner, this.configuration.codeCachePath),
 			instantiationService.createInstance(LanguagePackCachedDataCleaner),
@@ -175,7 +175,7 @@ class SharedProcessMain extends Disposable {
 		services.set(IProductService, productService);
 
 		// Main Process
-		const mainRouter = new StaticRouter(ctx => ctx === 'main');
+		const mainRouter = new StaticRouter(ctx => ctx === 'main'); // 选择上下文为 main 的客户端，其实就是选择主进程了
 		const mainProcessService = new MessagePortMainProcessService(this.server, mainRouter);
 		services.set(IMainProcessService, mainProcessService);
 
@@ -190,7 +190,9 @@ class SharedProcessMain extends Disposable {
 
 		// Log
 		const multiplexLogger = this._register(new MultiplexLogService([
+			// 控制台日志器
 			this._register(new ConsoleLogger(this.configuration.logLevel)),
+			// 文件日志器，通过 IPC 让主进程输出
 			this._register(loggerService.createLogger(joinPath(URI.file(environmentService.logsPath), 'sharedprocess.log'), { name: 'sharedprocess' }))
 		]));
 

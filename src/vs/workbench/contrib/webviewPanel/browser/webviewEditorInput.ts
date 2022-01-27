@@ -10,6 +10,7 @@ import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { IOverlayWebview } from 'vs/workbench/contrib/webview/browser/webview';
 import { WebviewIconManager, WebviewIcons } from 'vs/workbench/contrib/webviewPanel/browser/webviewIconManager';
 
+// 包装了一个 IOverlayWebview 实例
 export class WebviewInput extends EditorInput {
 
 	public static typeId = 'workbench.editors.webviewInput';

@@ -453,6 +453,7 @@ export const enum FileSystemProviderCapabilities {
 	FileAtomicRead = 1 << 14
 }
 
+// 文件系统提供者接口
 export interface IFileSystemProvider {
 
 	readonly capabilities: FileSystemProviderCapabilities;
@@ -475,7 +476,7 @@ export interface IFileSystemProvider {
 
 	readFileStream?(resource: URI, opts: FileReadStreamOptions, token: CancellationToken): ReadableStreamEvents<Uint8Array>;
 
-	open?(resource: URI, opts: FileOpenOptions): Promise<number>;
+	open?(resource: URI, opts: FileOpenOptions): Promise<number>; // 返回文件描述符
 	close?(fd: number): Promise<void>;
 	read?(fd: number, pos: number, data: Uint8Array, offset: number, length: number): Promise<number>;
 	write?(fd: number, pos: number, data: Uint8Array, offset: number, length: number): Promise<number>;

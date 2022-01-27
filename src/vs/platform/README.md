@@ -1,0 +1,67 @@
+- instantiation 服务依赖注入机制
+- ipc
+- lifecyle LifecycleMainService 应用程序生命周期管理服务，负责应用程序和各个窗口的生命周期管理
+- environment 环境服务，主要提供一些特定文件路径名、环境配置值
+- workspace 和 workspaces 是关于工作区的一些定义、服务
+  - VS Code 中 workspace 分几种：
+    - multi-root workspace，或就叫 workspace，可以包含多个工作目录
+      - 工作区配置文件，存放工作区的各种配置，比如此工作区包含的工作目录们的路径
+        - 有名工作区配置文件，后缀名是 .code-workspace，用户可以把它存储在任何地方
+        - 未命名 untitled 工作区配置文件，是在用户数据目录下的 Workspaces 目录下根据这个未命名工作区的创建时间戳命名的目录下的 workspace.json 文件
+    - single-folder workspace，直接对应一个工作目录
+      - 工作目录下的 .vscode 子目录存放工作区的各种配置
+- log 分清楚几种不同命名方式的类
+  - Logger 日志器
+    - ILogger 接口
+    - AbstractMessageLogger 把 message 和 args 格式化成一个 message，适合那些只接收一个 message 参数的日志器类
+    - ConsoleMainLogger 控制台日志器，对于非 Windows 环境下输出彩色日志；在主进程中使用
+    - ConsoleLogger 控制台日志器，输出彩色日志
+    - FileLogger 文件日志器，对整个文件读取和写入以完成输出日志，带 rotate 功能，最多保留 6 个文件
+    - node 目录中 SpdLogLogger 文件日志器，带 rotate 功能，最多保留 6 个文件
+  - LogService 日志器服务，可以认为就是日志器
+    - ILogService 服务接口
+    - LogService 包装了一个 Logger
+    - MultiplexLogService 输出日志到多个 Logger 或 LogService 的日志聚合器服务
+    - NullLogService 空日志服务
+    - BufferLogService 缓存日志服务，先缓存日志，可以延后设置 logger 再真得输出到 logger
+  - LoggerService 日志器管理服务，可以根据日志文件 URI 来创建和获取日志器
+    - ILoggerService 服务接口
+    - AbstractLoggerService 抽象日志器管理服务类，使用 Map 来管理创建的日志器，可监听传入的日志级别变更事件来设置自己创建的所有日志器的级别
+    - FileLoggerService 文件日志管理器服务，使用了 BufferLogService 和 FileLogger
+    - node 目录中 LoggerService，使用了 SpdLogLogger 或 FileLogger
+- storage 键值存储
+  - 关联 src/vs/base/parts/storage
+  - StorageScope 存储域分为 GLOBAL 和 WORKSPACE
+  - IStorageService 存储服务接口，键值存储方法，都带了 StorageScope 存储域参数
+    - AbstractStorageService 抽象类
+    - InMemoryStorageService 类是内存存储服务
+    - BrowserStorageService 类是 Web 环境中的存储服务
+      - IndexedDBStorageDatabase 是基于 IndexedDB 实现的 IStorageDatabase
+    - NativeStorageService 类是沙盒环境中的存储服务
+      - 使用了 StorageDatabaseChannelClient 间接访问 IStorageMainService
+  - IStorageMainService 主存储服务接口，键值存储方法，不带 StorageScope 存储域参数
+    - globalStorage 为全局存储，workspaceStorage 方法为指定 workspace 的工作区存储
+    - StorageMainService 类使用了 GlobalStorageMain 和 WorkspaceStorageMain
+  - IStorageMain 主存储接口，键值存储方法
+    - GlobalStorageMain 全局存储类
+    - WorkspaceStorageMain 工作区存储类
+    - 都使用到了 src/vs/base/parts/storage 中的 SQLiteStorageDatabase
+  - StorageDatabaseChannel 是基于 IPC 实现的服务端 channel，其实访问的是 IStorageMainService
+  - StorageDatabaseChannelClient 是基于 IPC 实现的客户端 channel
+- sharedProcess 共享进程是 VS Code 中一个常驻进程
+  - electron-main/sharedProcess 中的 SharedProcess 是管理这个共享进程的实体
+    - 创建并管理 Shared Process 渲染窗口/进程，加载执行的是 vs/code/electron-browser/sharedProcess
+    - 这个渲染窗口/进程只在窗口中显示一个 Shared Process，但是会干很多任务，你需要在它的 Developer Tools 界面中查看日志
+    - 渲染窗口/进程的一个很重要的任务是管理 worker 线程/进程，是通过下述 SharedProcessWorkerService 服务
+  - electron-browser
+    - sharedProcessWorkerService 中 SharedProcessWorkerService 管理 worker 线程/进程，SharedProcessWebWorker 代表 worker 线程
+    - 每个 worker 线程使用 vs/base/worker/workerMain.js 加载执行 sharedProcessWorkerMain
+    - sharedProcessWorkerMain 管理多个 worker 进程，给这些 worker 进程加载执行同一个模块，每个 worker 进程都是对应给一个渲染窗口使用
+- contextkey 上下文键，主要用在快捷键触发时的上下文判断，见 https://code.visualstudio.com/api/references/when-clause-contexts
+  - IContextKeyExpression 上下文键表达式，就是 when clause 里面的表达式
+    - ContextKeyExpression 类型，包含了若干种不同的表达式类
+    - IContext 上下文接口
+    - IContextKey 上下文键接口，针对特定键
+    - IContextKeyService 上下文键服务接口
+      - createScoped 方法，创建针对 HTMLElement 元素的子上下文键服务
+      - createOverlay 方法，创建附加额外高优先级上下文键值对的子上下文键服务

@@ -16,6 +16,7 @@ export class SharedProcessService extends Disposable implements ISharedProcessSe
 
 	declare readonly _serviceBrand: undefined;
 
+	// 由于是在构造函数中得到的 promise，所以没法直接 await 得到值
 	private readonly withSharedProcessConnection: Promise<MessagePortClient>;
 
 	private readonly restoredBarrier = new Barrier();
@@ -26,6 +27,7 @@ export class SharedProcessService extends Disposable implements ISharedProcessSe
 	) {
 		super();
 
+		// 连接 Shared Process 得到 IPC 客户端
 		this.withSharedProcessConnection = this.connect();
 	}
 
@@ -42,6 +44,8 @@ export class SharedProcessService extends Disposable implements ISharedProcessSe
 
 		// Acquire a message port connected to the shared process
 		mark('code/willConnectSharedProcess');
+		// 获取 Shared Process 的 MessagePort
+		// 参见 src/vs/platform/sharedProcess/electron-main/sharedProcess.ts 中的 onWindowConnection
 		const port = await acquirePort('vscode:createSharedProcessMessageChannel', 'vscode:createSharedProcessMessageChannelResult');
 		mark('code/didConnectSharedProcess');
 		this.logService.trace('Renderer->SharedProcess#connect: connection established');

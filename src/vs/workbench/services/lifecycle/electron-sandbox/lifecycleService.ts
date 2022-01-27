@@ -110,6 +110,7 @@ export class NativeLifecycleService extends AbstractLifecycleService {
 			reason
 		});
 
+		// 等待 5s 还没 settle 的 veto，打印出来
 		const longRunningBeforeShutdownWarning = disposableTimeout(() => {
 			logService.warn(`[lifecycle] onBeforeShutdown is taking a long time, pending operations: ${Array.from(pendingVetos).join(', ')}`);
 		}, NativeLifecycleService.BEFORE_SHUTDOWN_WARNING_DELAY);
@@ -164,6 +165,7 @@ export class NativeLifecycleService extends AbstractLifecycleService {
 			reason
 		});
 
+		// 等待 5s 还没 settle 的 join，打印出来
 		const longRunningWillShutdownWarning = disposableTimeout(() => {
 			this.logService.warn(`[lifecycle] onWillShutdown is taking a long time, pending operations: ${Array.from(pendingJoiners).join(', ')}`);
 		}, NativeLifecycleService.WILL_SHUTDOWN_WARNING_DELAY);

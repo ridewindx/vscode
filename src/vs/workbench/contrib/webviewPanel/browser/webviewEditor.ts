@@ -64,6 +64,7 @@ export class WebviewEditor extends EditorPane {
 		return this._scopedContextKeyService.value;
 	}
 
+	// parent 元素将作为 overlay webview 覆盖的目标
 	protected createEditor(parent: HTMLElement): void {
 		const element = document.createElement('div');
 		this._element = element;

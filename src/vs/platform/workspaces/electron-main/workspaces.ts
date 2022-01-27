@@ -21,9 +21,11 @@ export function getWorkspaceIdentifier(configPath: URI): IWorkspaceIdentifier {
 	function getWorkspaceId(): string {
 		let configPathStr = configPath.scheme === Schemas.file ? originalFSPath(configPath) : configPath.toString();
 		if (!isLinux) {
+			// 非 Linux 平台，小写化
 			configPathStr = configPathStr.toLowerCase(); // sanitize for platform file system
 		}
 
+		// multi-root 工作区 id 是其配置文件路径的 MD5 哈希
 		return createHash('md5').update(configPathStr).digest('hex');
 	}
 
@@ -45,6 +47,7 @@ export function getSingleFolderWorkspaceIdentifier(folderUri: URI, folderStat?: 
 
 		// Remote: produce a hash from the entire URI
 		if (folderUri.scheme !== Schemas.file) {
+			// 远程目录，直接哈希
 			return createHash('md5').update(folderUri.toString()).digest('hex');
 		}
 
@@ -72,6 +75,7 @@ export function getSingleFolderWorkspaceIdentifier(folderUri: URI, folderStat?: 
 
 		// we use the ctime as extra salt to the ID so that we catch the case of a folder getting
 		// deleted and recreated. in that case we do not want to carry over previous state
+		// 目录路径和 ctime 的哈希，使得能区分目录被删除重建的情况
 		return createHash('md5').update(folderUri.fsPath).update(ctime ? String(ctime) : '').digest('hex');
 	}
 
