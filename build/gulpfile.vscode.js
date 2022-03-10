@@ -389,6 +389,8 @@ BUILD_TARGETS.forEach(buildTarget => {
 	}
 });
 
+// 以下是语言本地化相关的任务
+
 const innoSetupConfig = {
 	'zh-cn': { codePage: 'CP936', defaultInfo: { name: 'Simplified Chinese', id: '$0804', } },
 	'zh-tw': { codePage: 'CP950', defaultInfo: { name: 'Traditional Chinese', id: '$0404' } },

@@ -63,6 +63,7 @@ export interface IWorkspaceContextService extends IWorkspaceFolderProvider {
 	/**
 	 * Returns the folder for the given resource from the workspace.
 	 * Can be null if there is no workspace or the resource is not inside the workspace.
+	 * 找到指定 resource 所在的工作区子目录
 	 */
 	getWorkspaceFolder(resource: URI): IWorkspaceFolder | null;
 
@@ -233,6 +234,7 @@ export interface IWorkspace {
 
 	/**
 	 * Folders in the workspace.
+	 * 工作区所拥有的子目录；单目录工作区只有一个子目录；空工作区没有子目录
 	 */
 	readonly folders: IWorkspaceFolder[];
 
@@ -240,11 +242,13 @@ export interface IWorkspace {
 	 * Transient workspaces are meant to go away after being used
 	 * once, e.g. a window reload of a transient workspace will
 	 * open an empty window.
+	 * 是否为暂时的工作区，比如打开空窗口
 	 */
 	readonly transient?: boolean;
 
 	/**
 	 * the location of the workspace configuration
+	 * 工作区配置文件路径；单目录工作区为 null
 	 */
 	readonly configuration?: URI | null;
 }
@@ -261,17 +265,20 @@ export interface IWorkspaceFolderData {
 
 	/**
 	 * The associated URI for this workspace folder.
+	 * 工作区所属目录的绝对路径
 	 */
 	readonly uri: URI;
 
 	/**
 	 * The name of this workspace folder. Defaults to
 	 * the basename of its [uri-path](#Uri.path)
+	 * 工作区所属目录的名字，默认是目录名
 	 */
 	readonly name: string;
 
 	/**
 	 * The ordinal number of this workspace folder.
+	 * 此目录在工作区配置文件中的位置序号
 	 */
 	readonly index: number;
 }
@@ -280,6 +287,7 @@ export interface IWorkspaceFolder extends IWorkspaceFolderData {
 
 	/**
 	 * Given workspace folder relative path, returns the resource with the absolute path.
+	 * 给出相对于这个目录的路径，得到绝对路径
 	 */
 	toResource: (relativePath: string) => URI;
 }
@@ -295,7 +303,7 @@ export function isWorkspaceFolder(thing: unknown): thing is IWorkspaceFolder {
 
 export class Workspace implements IWorkspace {
 
-	private _foldersMap: TernarySearchTree<URI, WorkspaceFolder> = TernarySearchTree.forUris<WorkspaceFolder>(this._ignorePathCasing);
+	private _foldersMap: TernarySearchTree<URI, WorkspaceFolder> = TernarySearchTree.forUris<WorkspaceFolder>(this._ignorePathCasing); // 用于前缀搜索
 	private _folders!: WorkspaceFolder[];
 
 	constructor(

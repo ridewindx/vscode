@@ -8,6 +8,7 @@ import { isChrome, isEdge, isFirefox, isLinux, isMacintosh, isSafari, isWeb, isW
 import { isFalsyOrWhitespace } from 'vs/base/common/strings';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 
+// 常量表达式，也就是从这个字面量能直接得到 true 或 false
 const CONSTANT_VALUES = new Map<string, boolean>();
 CONSTANT_VALUES.set('false', false);
 CONSTANT_VALUES.set('true', true);
@@ -23,23 +24,24 @@ CONSTANT_VALUES.set('isSafari', isSafari);
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
+// 上下文键的表达式类型
 export const enum ContextKeyExprType {
-	False = 0,
-	True = 1,
-	Defined = 2,
-	Not = 3,
-	Equals = 4,
-	NotEquals = 5,
-	And = 6,
-	Regex = 7,
+	False = 0, // 总是求值为 false
+	True = 1, // 总是求值为 true
+	Defined = 2, // 非空
+	Not = 3, // !，空
+	Equals = 4, // ==
+	NotEquals = 5, // !=
+	And = 6, // &&
+	Regex = 7, // =~
 	NotRegex = 8,
-	Or = 9,
-	In = 10,
-	NotIn = 11,
-	Greater = 12,
-	GreaterEquals = 13,
-	Smaller = 14,
-	SmallerEquals = 15,
+	Or = 9, // ||
+	In = 10, // key in valueKey，键的值在另一个键的值（数组的元素或对象的键）里面
+	NotIn = 11, // !(key in valueKey)
+	Greater = 12, // >
+	GreaterEquals = 13, // >=
+	Smaller = 14, // <
+	SmallerEquals = 15, // <=
 }
 
 export interface IContextKeyExprMapper {
@@ -55,15 +57,16 @@ export interface IContextKeyExprMapper {
 	mapIn(key: string, valueKey: string): ContextKeyInExpr;
 }
 
+// 上下文键的求值表达式，就是 when clause context 里面的表达式
 export interface IContextKeyExpression {
-	cmp(other: ContextKeyExpression): number;
-	equals(other: ContextKeyExpression): boolean;
-	substituteConstants(): ContextKeyExpression | undefined;
-	evaluate(context: IContext): boolean;
-	serialize(): string;
-	keys(): string[];
-	map(mapFnc: IContextKeyExprMapper): ContextKeyExpression;
-	negate(): ContextKeyExpression;
+	cmp(other: ContextKeyExpression): number; // 比较两个表达式，主要用来排序
+	equals(other: ContextKeyExpression): boolean; // 两个表达式是否一样
+	substituteConstants(): ContextKeyExpression | undefined; // 若可能的话，返回这个表达式的常量版本，也就是 true 或 false 常量表达式
+	evaluate(context: IContext): boolean; // 表达式求值为 true 或 false，传入的是上下文，可以提取出表达式涉及的上下文键的值
+	serialize(): string; // 表达式序列化字符串
+	keys(): string[]; // 返回表达式涉及的所有上下文键；很多表达式只涉及一个键
+	map(mapFnc: IContextKeyExprMapper): ContextKeyExpression; // 映射成另一种表达式
+	negate(): ContextKeyExpression; // 相反的表达式
 
 }
 
@@ -1520,14 +1523,15 @@ class ContextKeyOrExpr implements IContextKeyExpression {
 
 export interface ContextKeyInfo {
 	readonly key: string;
-	readonly type?: string;
+	readonly type?: string; // 值的类型
 	readonly description?: string;
 }
 
 export class RawContextKey<T> extends ContextKeyDefinedExpr {
 
-	private static _info: ContextKeyInfo[] = [];
+	private static _info: ContextKeyInfo[] = []; // 全局的上下文键信息列表
 
+	// 返回全局所有上下文键的信息
 	static all(): IterableIterator<ContextKeyInfo> {
 		return RawContextKey._info.values();
 	}
@@ -1567,16 +1571,19 @@ export class RawContextKey<T> extends ContextKeyDefinedExpr {
 	}
 }
 
+// 上下文接口
 export interface IContext {
 	getValue<T>(key: string): T | undefined;
 }
 
+// 上下文键接口
 export interface IContextKey<T> {
 	set(value: T): void;
 	reset(): void;
 	get(): T | undefined;
 }
 
+// 其实是 HTMLElement 的接口类
 export interface IContextKeyServiceTarget {
 	parentElement: IContextKeyServiceTarget | null;
 	setAttribute(attr: string, value: string): void;
@@ -1595,6 +1602,7 @@ export interface IContextKeyChangeEvent {
 	affectsSome(keys: IReadableSet<string>): boolean;
 }
 
+// 上下文键服务接口，含有上下文的键值对
 export interface IContextKeyService {
 	readonly _serviceBrand: undefined;
 	dispose(): void;
@@ -1603,6 +1611,7 @@ export interface IContextKeyService {
 	bufferChangeEvents(callback: Function): void;
 
 	createKey<T>(key: string, defaultValue: T | undefined): IContextKey<T>;
+	// 检查上下文是否满足传入的表达式；若表达式为 undefined，则返回 true
 	contextMatchesRules(rules: ContextKeyExpression | undefined): boolean;
 	getContextKeyValue<T>(key: string): T | undefined;
 
@@ -1625,6 +1634,7 @@ function cmp1(key1: string, key2: string): number {
 	return 0;
 }
 
+// 比较键；若键相等，则比较值
 function cmp2(key1: string, value1: any, key2: string, value2: any): number {
 	if (key1 < key2) {
 		return -1;

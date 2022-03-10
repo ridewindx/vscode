@@ -20,7 +20,7 @@ export class Client extends IPCClient implements IDisposable {
 
 	private static createProtocol(): ElectronProtocol {
 		const onMessage = Event.fromNodeEventEmitter<VSBuffer>(ipcRenderer, 'vscode:message', (_, message) => VSBuffer.wrap(message));
-		ipcRenderer.send('vscode:hello');
+		ipcRenderer.send('vscode:hello'); // 发送 vscode:hello 以建立连接
 
 		return new ElectronProtocol(ipcRenderer, onMessage);
 	}

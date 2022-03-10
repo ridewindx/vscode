@@ -93,9 +93,10 @@ namespace WebviewState {
 
 	export const Ready = { type: Type.Ready } as const;
 
-	export type State = typeof Ready | Initializing;
+	export type State = typeof Ready | Initializing; // 这种写法很有意思
 }
 
+// pre 目录下 main.js 主要和此类通信
 export class WebviewElement extends Disposable implements IWebview, WebviewFindDelegate {
 
 	public readonly id: string;
@@ -133,7 +134,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 
 	private _confirmBeforeClose: string;
 
-	private readonly _focusDelayer = this._register(new ThrottledDelayer(50));
+	private readonly _focusDelayer = this._register(new ThrottledDelayer(50)); // 50ms
 
 	private readonly _onDidHtmlChange: Emitter<string> = this._register(new Emitter<string>());
 	protected readonly onDidHtmlChange = this._onDidHtmlChange.event;
@@ -148,7 +149,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		id: string,
 		private readonly options: WebviewOptions,
 		contentOptions: WebviewContentOptions,
-		public extension: WebviewExtensionDescription | undefined,
+		public extension: WebviewExtensionDescription | undefined, // 此 webview 所属的扩展
 		protected readonly webviewThemeDataProvider: WebviewThemeDataProvider,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IContextMenuService contextMenuService: IContextMenuService,
@@ -201,6 +202,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 
 				this.messagePort = e.ports[0];
 				this.messagePort.onmessage = (e) => {
+					// 把消息都派发给监听了此 channel 的处理函数执行
 					const handlers = this._messageHandlers.get(e.data.channel);
 					if (!handlers) {
 						console.log(`No handlers found for '${e.data.channel}'`);
@@ -224,10 +226,12 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			this.handleNoCspFound();
 		}));
 
+		// 链接被点击
 		this._register(this.on(WebviewMessageChannels.didClickLink, (uri: string) => {
 			this._onDidClickLink.fire(uri);
 		}));
 
+		// onmessage 监听有事件触发
 		this._register(this.on(WebviewMessageChannels.onmessage, (data: { message: any; transfer?: ArrayBuffer[] }) => {
 			this._onMessage.fire({
 				message: data.message,
@@ -268,6 +272,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			notificationService.error(localize('fatalErrorMessage', "Error loading webview: {0}", e.message));
 		}));
 
+		// 触发键盘按键按下
 		this._register(this.on(WebviewMessageChannels.didKeydown, (data: KeyboardEvent) => {
 			// Electron: workaround for https://github.com/electron/electron/issues/14258
 			// We have to detect keyboard events in the <webview> and dispatch them to our
@@ -275,10 +280,12 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			this.handleKeyEvent('keydown', data);
 		}));
 
+		// 触发键盘按键弹起
 		this._register(this.on(WebviewMessageChannels.didKeyup, (data: KeyboardEvent) => {
 			this.handleKeyEvent('keyup', data);
 		}));
 
+		// 触发上下文菜单，比如用户右键点击
 		this._register(this.on(WebviewMessageChannels.didContextMenu, (data: { clientX: number; clientY: number }) => {
 			if (!this.element) {
 				return;
@@ -286,6 +293,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			if (!this._contextKeyService) {
 				return;
 			}
+			// 显示上下文菜单
 			const elementBox = this.element.getBoundingClientRect();
 			contextMenuService.showContextMenu({
 				getActions: () => {
@@ -312,6 +320,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 					path: decodeURIComponent(entry.path), // This gets re-encoded
 					query: entry.query ? decodeURIComponent(entry.query) : entry.query,
 				});
+				// 从文件服务加载本地资源
 				this.loadResource(entry.id, uri, entry.ifNoneMatch);
 			} catch (e) {
 				this._send('did-load-resource', {
@@ -323,6 +332,8 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		}));
 
 		this._register(this.on(WebviewMessageChannels.loadLocalhost, (entry: any) => {
+			// 访问扩展 start 的 localhost web server，需要考虑 remote 环境的扩展，使用端口映射
+			// 见 https://code.visualstudio.com/api/advanced-topics/remote-extensions#option-2-use-a-port-mapping
 			this.localLocalhost(entry.id, entry.origin);
 		}));
 
@@ -339,6 +350,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			webviewElementType: 'iframe',
 		});
 
+		// 是否关闭前需要确认
 		this._confirmBeforeClose = configurationService.getValue<string>('window.confirmBeforeClose');
 
 		this._register(configurationService.onDidChangeConfiguration(e => {
@@ -376,12 +388,14 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 	private readonly _onMissingCsp = this._register(new Emitter<ExtensionIdentifier>());
 	public readonly onMissingCsp = this._onMissingCsp.event;
 
+	// iframe 中链接被点击
 	private readonly _onDidClickLink = this._register(new Emitter<string>());
 	public readonly onDidClickLink = this._onDidClickLink.event;
 
 	private readonly _onDidReload = this._register(new Emitter<void>());
 	public readonly onDidReload = this._onDidReload.event;
 
+	// iframe 中 onmessage 监听被触发
 	private readonly _onMessage = this._register(new Emitter<WebviewMessageReceivedEvent>());
 	public readonly onMessage = this._onMessage.event;
 
@@ -421,6 +435,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		const element = document.createElement('iframe');
 		element.name = this.id;
 		element.className = `webview ${options.customClasses || ''}`;
+		// 参见 https://developer.mozilla.org/zh-CN/docs/Web/HTML/Element/iframe#attr-sandbox
 		element.sandbox.add('allow-scripts', 'allow-same-origin', 'allow-forms', 'allow-pointer-lock', 'allow-downloads');
 		if (!isFirefox) {
 			element.setAttribute('allow', 'clipboard-read; clipboard-write;');
@@ -437,6 +452,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 	}
 
 	private initElement(extension: WebviewExtensionDescription | undefined, options: WebviewOptions) {
+		// 构造 URL 的查询参数
 		// The extensionId and purpose in the URL are used for filtering in js-debug:
 		const params: { [key: string]: string } = {
 			id: this.iframeId,
@@ -460,6 +476,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		// Workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=1754872
 		const fileName = isFirefox ? 'index-no-csp.html' : 'index.html';
 
+		// 设置 iframe 的 src
 		this.element!.setAttribute('src', `${this.webviewContentEndpoint}/${fileName}?${queryString}`);
 	}
 
@@ -475,6 +492,8 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 	}
 
 	protected get webviewContentEndpoint(): string {
+		// 把占位符替换为 id
+		// 见 src/vs/workbench/services/environment/electron-sandbox/environmentService.ts 中的 webviewExternalEndpoint
 		const endpoint = this._environmentService.webviewExternalEndpoint!.replace('{{uuid}}', this.id);
 		if (endpoint[endpoint.length - 1] === '/') {
 			return endpoint.slice(0, endpoint.length - 1);
@@ -555,6 +574,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		this._onDidHtmlChange.fire(value);
 	}
 
+	// 根据插件是否远程而改写访问资源的 URL
 	private rewriteVsCodeResourceUrls(value: string): string {
 		const isRemote = this.extension?.location?.scheme === Schemas.vscodeRemote;
 		const remoteAuthority = this.extension?.location?.scheme === Schemas.vscodeRemote ? this.extension.location.authority : undefined;
@@ -617,6 +637,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		this.content = newContent;
 
 		const allowScripts = !!this.content.options.allowScripts;
+		// 发送 content 给 iframe
 		this._send('content', {
 			contents: this.content.html,
 			options: {
@@ -625,7 +646,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 				allowForms: this.content.options.allowForms ?? allowScripts, // For back compat, we allow forms by default when scripts are enabled
 			},
 			state: this.content.state,
-			cspSource: webviewGenericCspSource,
+			cspSource: webviewGenericCspSource, // CSP 策略允许的域名
 			confirmBeforeClose: this._confirmBeforeClose,
 		});
 	}
@@ -725,7 +746,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 						status: 200,
 						path: uri.path,
 						mime: result.mimeType,
-						data: buffer,
+						data: buffer, // 资源内容的 VSBuffer
 						etag: result.etag,
 						mtime: result.mtime
 					}, [buffer]);
@@ -733,7 +754,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 				case WebviewResourceResponse.Type.NotModified: {
 					return this._send('did-load-resource', {
 						id,
-						status: 304, // not modified
+						status: 304, // not modified 没有修改
 						path: uri.path,
 						mime: result.mimeType,
 						mtime: result.mtime
@@ -742,7 +763,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 				case WebviewResourceResponse.Type.AccessDenied: {
 					return this._send('did-load-resource', {
 						id,
-						status: 401, // unauthorized
+						status: 401, // unauthorized 无授权
 						path: uri.path,
 					});
 				}
@@ -753,7 +774,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 
 		return this._send('did-load-resource', {
 			id,
-			status: 404,
+			status: 404,// 没找到
 			path: uri.path,
 		});
 	}
@@ -770,7 +791,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		return this._send('did-load-localhost', {
 			id,
 			origin,
-			location: redirect
+			location: redirect // 若是 undefined，表示不用重定向
 		});
 	}
 

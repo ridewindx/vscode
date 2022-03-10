@@ -452,6 +452,7 @@ export interface IEditorGroup {
 	 * order of groups from left to right and top to bottom. The lowest
 	 * index will likely be top-left while the largest index in most
 	 * cases should be bottom-right, but that depends on the grid.
+	 * 位置序号，从左到右，从上到下
 	 */
 	readonly index: number;
 
@@ -459,6 +460,7 @@ export interface IEditorGroup {
 	 * A human readable label for the group. This label can change depending
 	 * on the layout of all editor groups. Clients should listen on the
 	 * `onDidGroupModelChange` event to react to that.
+	 * 编辑器组的标签
 	 */
 	readonly label: string;
 

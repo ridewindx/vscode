@@ -1,0 +1,12 @@
+- pre 目录
+- browser 目录
+  - webview
+    - IWebview 是 Webview 窗口接口
+      - IWebviewElement 子接口，可以添加到指定父元素中
+        - WebviewElement 类
+      - IOverlayWebview 子接口，可以完全覆盖在指定元素上，且能指定长宽
+        - OverlayWebview 类，其实也创建 WebviewElement 类实例
+    - IWebviewService 是 Webview 管理服务接口
+      - 可以创建 WebviewElement 和 OverlayWebview 实例，且能获悉当前 active 的 webview
+      - WebviewService 类
+- electron-sandbox 目录

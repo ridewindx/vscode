@@ -12,7 +12,7 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import { BufferLogService } from 'vs/platform/log/common/bufferLog';
 import { AbstractLogger, AbstractLoggerService, format, ILogger, ILoggerOptions, ILoggerService, ILogService, LogLevel } from 'vs/platform/log/common/log';
 
-const MAX_FILE_SIZE = 5 * ByteSize.MB;
+const MAX_FILE_SIZE = 5 * ByteSize.MB; // 日志文件最大 5 MB
 
 export class FileLogger extends AbstractLogger implements ILogger {
 
@@ -92,8 +92,8 @@ export class FileLogger extends AbstractLogger implements ILogger {
 
 	private _log(level: LogLevel, message: string): void {
 		this.queue.queue(async () => {
-			await this.initializePromise;
-			let content = await this.loadContent();
+			await this.initializePromise; // 等待文件创建完成
+			let content = await this.loadContent(); // 读取整个日志文件内容
 			if (content.length > MAX_FILE_SIZE) {
 				await this.fileService.writeFile(this.getBackupResource(), VSBuffer.fromString(content));
 				content = '';
@@ -103,6 +103,7 @@ export class FileLogger extends AbstractLogger implements ILogger {
 			} else {
 				content += `[${this.getCurrentTimestamp()}] [${this.name}] [${this.stringifyLogLevel(level)}] ${message}\n`;
 			}
+			// 写入整个日志文件内容
 			await this.fileService.writeFile(this.resource, VSBuffer.fromString(content));
 		});
 	}
@@ -115,7 +116,8 @@ export class FileLogger extends AbstractLogger implements ILogger {
 	}
 
 	private getBackupResource(): URI {
-		this.backupIndex = this.backupIndex > 5 ? 1 : this.backupIndex;
+		this.backupIndex = this.backupIndex > 5 ? 1 : this.backupIndex; // 文件名后缀索引从 1 到 5
+		// 日志文件名_索引
 		return joinPath(dirname(this.resource), `${basename(this.resource)}_${this.backupIndex++}`);
 	}
 
@@ -154,6 +156,7 @@ export class FileLoggerService extends AbstractLoggerService implements ILoggerS
 
 	protected doCreateLogger(resource: URI, logLevel: LogLevel, options?: ILoggerOptions): ILogger {
 		const logger = new BufferLogService(logLevel);
+		// 监听到文件 provider 后才设置真正的文件 logger
 		whenProviderRegistered(resource, this.fileService).then(() => (<BufferLogService>logger).logger = this.instantiationService.createInstance(FileLogger, options?.name || basename(resource), resource, logger.getLevel(), !!options?.donotUseFormatters));
 		return logger;
 	}

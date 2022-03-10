@@ -944,9 +944,11 @@ export function restoreParentsScrollTop(node: Element, state: number[]): void {
 
 class FocusTracker extends Disposable implements IFocusTracker {
 
+	// 聚焦事件
 	private readonly _onDidFocus = this._register(new event.Emitter<void>());
 	public readonly onDidFocus: event.Event<void> = this._onDidFocus.event;
 
+	// 失焦事件
 	private readonly _onDidBlur = this._register(new event.Emitter<void>());
 	public readonly onDidBlur: event.Event<void> = this._onDidBlur.event;
 
@@ -1093,6 +1095,7 @@ function _$<T extends Element>(namespace: Namespace, description: string, attrs?
 	return result as T;
 }
 
+// 创建 HTMLElement 元素
 export function $<T extends HTMLElement>(description: string, attrs?: { [key: string]: any }, ...children: Array<Node | string>): T {
 	return _$(Namespace.HTML, description, attrs, ...children);
 }

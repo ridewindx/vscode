@@ -182,6 +182,7 @@ export function toWorkspaceFolders(configuredFolders: IStoredWorkspaceFolder[], 
 		let uri: URI | undefined = undefined;
 		if (isRawFileWorkspaceFolder(configuredFolder)) {
 			if (configuredFolder.path) {
+				// path 是相对于工作区配置文件所在目录的相对路径，所以要 resolve 一下
 				uri = extUri.resolvePath(relativeTo, configuredFolder.path);
 			}
 		} else if (isRawUriWorkspaceFolder(configuredFolder)) {
@@ -202,6 +203,7 @@ export function toWorkspaceFolders(configuredFolders: IStoredWorkspaceFolder[], 
 			if (!seen.has(comparisonKey)) {
 				seen.add(comparisonKey);
 
+				// 若没有 name，则取目录名或 URI 的 authority
 				const name = configuredFolder.name || extUri.basenameOrAuthority(uri);
 				result.push(new WorkspaceFolder({ uri, name, index: result.length }, configuredFolder));
 			}

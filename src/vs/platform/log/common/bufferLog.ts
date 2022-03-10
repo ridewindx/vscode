@@ -41,6 +41,7 @@ export class BufferLogService extends AbstractLogger implements ILogService {
 	set logger(logger: ILogger) {
 		this._logger = logger;
 
+		// 把缓存的日志都打印
 		for (const { level, args } of this.buffer) {
 			const fn = getLogFunction(logger, level);
 			fn.apply(logger, args);

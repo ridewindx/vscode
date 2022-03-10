@@ -14,6 +14,7 @@ import { LogLevel } from 'vs/platform/log/common/log';
 import { IPartsSplash } from 'vs/platform/theme/common/themeService';
 import { ISingleFolderWorkspaceIdentifier, IWorkspaceIdentifier } from 'vs/platform/workspace/common/workspace';
 
+// 窗口的最小尺寸
 export const WindowMinimumSize = {
 	WIDTH: 400,
 	WIDTH_WITH_VERTICAL_PANEL: 600,
@@ -71,14 +72,17 @@ export interface IBaseWindowOpenable {
 	label?: string;
 }
 
+// 打开工作区
 export interface IWorkspaceToOpen extends IBaseWindowOpenable {
 	readonly workspaceUri: URI;
 }
 
+// 打开目录
 export interface IFolderToOpen extends IBaseWindowOpenable {
 	readonly folderUri: URI;
 }
 
+// 打开单个文件
 export interface IFileToOpen extends IBaseWindowOpenable {
 	readonly fileUri: URI;
 }

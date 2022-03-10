@@ -99,6 +99,7 @@ abstract class BaseStorageMain extends Disposable implements IStorageMain {
 	private readonly _onDidCloseStorage = this._register(new Emitter<void>());
 	readonly onDidCloseStorage = this._onDidCloseStorage.event;
 
+	// 内存存储，在数据库存储初始化之前使用
 	private _storage: IStorage = new Storage(new InMemoryStorageDatabase()); // storage is in-memory until initialized
 	get storage(): IStorage { return this._storage; }
 
@@ -200,7 +201,7 @@ abstract class BaseStorageMain extends Disposable implements IStorageMain {
 
 export class GlobalStorageMain extends BaseStorageMain implements IStorageMain {
 
-	private static readonly STORAGE_NAME = 'state.vscdb';
+	private static readonly STORAGE_NAME = 'state.vscdb'; // SQLite 数据库文件名
 
 	constructor(
 		private readonly options: IStorageMainOptions,
@@ -227,6 +228,7 @@ export class GlobalStorageMain extends BaseStorageMain implements IStorageMain {
 		await super.doInit(storage);
 
 		// Apply global telemetry values as part of the initialization
+		// 更新遥测状态
 		this.updateTelemetryState(storage);
 	}
 
@@ -278,6 +280,7 @@ export class WorkspaceStorageMain extends BaseStorageMain implements IStorageMai
 		}
 
 		// Otherwise, ensure the storage folder exists on disk
+		// 以 workspace 的 id 为子目录名
 		const workspaceStorageFolderPath = join(this.environmentService.workspaceStorageHome.fsPath, this.workspace.id);
 		const workspaceStorageDatabasePath = join(workspaceStorageFolderPath, WorkspaceStorageMain.WORKSPACE_STORAGE_NAME);
 
@@ -297,13 +300,14 @@ export class WorkspaceStorageMain extends BaseStorageMain implements IStorageMai
 
 	private async ensureWorkspaceStorageFolderMeta(workspaceStorageFolderPath: string): Promise<void> {
 		let meta: object | undefined = undefined;
-		if (isSingleFolderWorkspaceIdentifier(this.workspace)) {
-			meta = { folder: this.workspace.uri.toString() };
-		} else if (isWorkspaceIdentifier(this.workspace)) {
-			meta = { workspace: this.workspace.configPath.toString() };
+		if (isSingleFolderWorkspaceIdentifier(this.workspace)) { // 单目录的 workspace
+			meta = { folder: this.workspace.uri.toString() }; // 单目录的路径
+		} else if (isWorkspaceIdentifier(this.workspace)) { // 多目录的 workspace
+			meta = { workspace: this.workspace.configPath.toString() }; // workspace 配置文件的路径
 		}
 
 		if (meta) {
+			// 写入 workspace.json 文件
 			try {
 				const workspaceStorageMetaPath = join(workspaceStorageFolderPath, WorkspaceStorageMain.WORKSPACE_META_NAME);
 				const storageExists = await Promises.exists(workspaceStorageMetaPath);

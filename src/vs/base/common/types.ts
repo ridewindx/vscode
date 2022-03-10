@@ -167,6 +167,7 @@ export function validateConstraints(args: unknown[], constraints: Array<TypeCons
 	}
 }
 
+// 验证 arg 是否满足 constraint 表示的约束
 export function validateConstraint(arg: unknown, constraint: TypeConstraint | undefined): void {
 
 	if (isString(constraint)) {

@@ -213,6 +213,7 @@ export class SQLiteStorageDatabase implements IStorageDatabase {
 		});
 	}
 
+	// 备份数据库，在后续数据库损坏时可以还原备份
 	private backup(): Promise<void> {
 		const backupPath = this.toBackupPath(this.path);
 
@@ -274,6 +275,7 @@ export class SQLiteStorageDatabase implements IStorageDatabase {
 			try {
 				await Promises.unlink(path);
 				try {
+					// 从备份还原
 					await Promises.rename(this.toBackupPath(path), path);
 				} catch (error) {
 					// ignore
@@ -285,6 +287,7 @@ export class SQLiteStorageDatabase implements IStorageDatabase {
 
 				// In case of any error to open the DB, use an in-memory
 				// DB so that we always have a valid DB to talk to.
+				// 使用内存数据库
 				return this.doConnect(SQLiteStorageDatabase.IN_MEMORY_PATH);
 			}
 		}

@@ -19,28 +19,35 @@ import { isFunction, isUndefinedOrNull } from 'vs/base/common/types';
  * An `IChannel` is an abstraction over a collection of commands.
  * You can `call` several commands on a channel, each taking at
  * most one single argument. A `call` always returns a promise
- * with at most one single return value.
+ * with at most one single return value. 客户端信道
  */
 export interface IChannel {
+	// 调用指定 command，单请求值，单返回值
+	// cancellationToken 控制是否取消此调用请求
 	call<T>(command: string, arg?: any, cancellationToken?: CancellationToken): Promise<T>;
-	listen<T>(event: string, arg?: any): Event<T>;
+	// event 为事件名
+	listen<T>(event: string, arg?: any): Event<T>; // 客户端使用回调函数监听返回的 Event
 }
 
 /**
  * An `IServerChannel` is the counter part to `IChannel`,
  * on the server-side. You should implement this interface
- * if you'd like to handle remote promises or events.
+ * if you'd like to handle remote promises or events. 服务端信道
  */
 export interface IServerChannel<TContext = string> {
+	// 比 IChannel 多了一个 ctx，是信道服务器的上下文
+	// command 和 arg 是客户端发送来的，cancellationToken 是由 ChannelServer 接力转换客户端的取消请求而来
 	call<T>(ctx: TContext, command: string, arg?: any, cancellationToken?: CancellationToken): Promise<T>;
-	listen<T>(ctx: TContext, event: string, arg?: any): Event<T>;
+	// event 和 arg 是客户端发送来的
+	listen<T>(ctx: TContext, event: string, arg?: any): Event<T>; // ChannelServer 使用回调函数监听返回的 Event，发送给客户端
 }
 
+// 请求类型
 export const enum RequestType {
-	Promise = 100,
-	PromiseCancel = 101,
-	EventListen = 102,
-	EventDispose = 103
+	Promise = 100, // 请求得到 Promise
+	PromiseCancel = 101, // 取消 Promise
+	EventListen = 102, // 订阅事件
+	EventDispose = 103 // 取消订阅事件
 }
 
 function requestTypeToStr(type: RequestType): string {
@@ -64,10 +71,10 @@ type IRawRequest = IRawPromiseRequest | IRawPromiseCancelRequest | IRawEventList
 
 export const enum ResponseType {
 	Initialize = 200,
-	PromiseSuccess = 201,
-	PromiseError = 202,
-	PromiseErrorObj = 203,
-	EventFire = 204
+	PromiseSuccess = 201, // call，调用成功
+	PromiseError = 202, // call，调用失败，把错误当作 Error 类型解析出来
+	PromiseErrorObj = 203, // call，调用失败，把错误直接当作 Object
+	EventFire = 204 // listen，事件触发
 }
 
 function responseTypeToStr(type: ResponseType): string {
@@ -95,9 +102,10 @@ interface IHandler {
 	(response: IRawResponse): void;
 }
 
+// 抽象的消息传递协议接口
 export interface IMessagePassingProtocol {
-	send(buffer: VSBuffer): void;
-	onMessage: Event<VSBuffer>;
+	send(buffer: VSBuffer): void; // 发送的都是单个 VSBuffer 实例
+	onMessage: Event<VSBuffer>; // 接收的是单个 VSBuffer 实例
 	/**
 	 * Wait for the write buffer (if applicable) to become empty.
 	 */
@@ -111,7 +119,7 @@ enum State {
 
 /**
  * An `IChannelServer` hosts a collection of channels. You are
- * able to register channels onto it, provided a channel name.
+ * able to register channels onto it, provided a channel name. // 信道服务端
  */
 export interface IChannelServer<TContext = string> {
 	registerChannel(channelName: string, channel: IServerChannel<TContext>): void;
@@ -119,16 +127,17 @@ export interface IChannelServer<TContext = string> {
 
 /**
  * An `IChannelClient` has access to a collection of channels. You
- * are able to get those channels, given their channel name.
+ * are able to get those channels, given their channel name. // 信道客户端
  */
 export interface IChannelClient {
 	getChannel<T extends IChannel>(channelName: string): T;
 }
 
 export interface Client<TContext> {
-	readonly ctx: TContext;
+	readonly ctx: TContext; // 上下文
 }
 
+// Connection 集中器，其实 IPCServer 就是把自己当作 IConnectionHub 的
 export interface IConnectionHub<TContext> {
 	readonly connections: Connection<TContext>[];
 	readonly onDidAddConnection: Event<Connection<TContext>>;
@@ -138,9 +147,10 @@ export interface IConnectionHub<TContext> {
 /**
  * An `IClientRouter` is responsible for routing calls to specific
  * channels, in scenarios in which there are multiple possible
- * channels (each from a separate client) to pick from.
+ * channels (each from a separate client) to pick from. 客户端路由器
  */
 export interface IClientRouter<TContext = string> {
+	// IPCServer 中把自己当作 hub
 	routeCall(hub: IConnectionHub<TContext>, command: string, arg?: any, cancellationToken?: CancellationToken): Promise<Client<TContext>>;
 	routeEvent(hub: IConnectionHub<TContext>, event: string, arg?: any): Promise<Client<TContext>>;
 }
@@ -225,34 +235,34 @@ const BufferPresets = {
 };
 
 declare const Buffer: any;
-const hasBuffer = (typeof Buffer !== 'undefined');
+const hasBuffer = (typeof Buffer !== 'undefined'); // 是否有 Buffer 类，Node.js 中有
 
 function serialize(writer: IWriter, data: any): void {
-	if (typeof data === 'undefined') {
+	if (typeof data === 'undefined') { // undefined
 		writer.write(BufferPresets.Undefined);
-	} else if (typeof data === 'string') {
-		const buffer = VSBuffer.fromString(data);
+	} else if (typeof data === 'string') { // string
+		const buffer = VSBuffer.fromString(data); // 使用 VSBuffer
 		writer.write(BufferPresets.String);
 		writer.write(createSizeBuffer(buffer.byteLength));
 		writer.write(buffer);
-	} else if (hasBuffer && Buffer.isBuffer(data)) {
-		const buffer = VSBuffer.wrap(data);
+	} else if (hasBuffer && Buffer.isBuffer(data)) { // Buffer
+		const buffer = VSBuffer.wrap(data); // 使用 VSBuffer
 		writer.write(BufferPresets.Buffer);
 		writer.write(createSizeBuffer(buffer.byteLength));
 		writer.write(buffer);
-	} else if (data instanceof VSBuffer) {
+	} else if (data instanceof VSBuffer) { // VSBuffer
 		writer.write(BufferPresets.VSBuffer);
 		writer.write(createSizeBuffer(data.byteLength));
 		writer.write(data);
-	} else if (Array.isArray(data)) {
+	} else if (Array.isArray(data)) { // Array
 		writer.write(BufferPresets.Array);
 		writer.write(createSizeBuffer(data.length));
 
 		for (const el of data) {
-			serialize(writer, el);
+			serialize(writer, el); // 序列化数组的每一个元素
 		}
-	} else {
-		const buffer = VSBuffer.fromString(JSON.stringify(data));
+	} else { // Object
+		const buffer = VSBuffer.fromString(JSON.stringify(data)); // JSON 序列化 Object
 		writer.write(BufferPresets.Object);
 		writer.write(createSizeBuffer(buffer.byteLength));
 		writer.write(buffer);
@@ -289,15 +299,19 @@ interface PendingRequest {
 export class ChannelServer<TContext = string> implements IChannelServer<TContext>, IDisposable {
 
 	private channels = new Map<string, IServerChannel<TContext>>();
-	private activeRequests = new Map<number, IDisposable>();
+	private activeRequests = new Map<number, IDisposable>(); // 活动请求的 Map，键为请求 ID
 	private protocolListener: IDisposable | null;
 
 	// Requests might come in for channels which are not yet registered.
 	// They will timeout after `timeoutDelay`.
+	// 保存向没有注册 channel 发送的请求，默认 1s 超时
 	private pendingRequests = new Map<string, PendingRequest[]>();
 
+	// ctx 上下文
 	constructor(private protocol: IMessagePassingProtocol, private ctx: TContext, private logger: IIPCLogger | null = null, private timeoutDelay: number = 1000) {
+		// 监听以接收客户端的请求消息
 		this.protocolListener = this.protocol.onMessage(msg => this.onRawMessage(msg));
+		// 发送初始化消息给客户端
 		this.sendResponse({ type: ResponseType.Initialize });
 	}
 
@@ -305,6 +319,7 @@ export class ChannelServer<TContext = string> implements IChannelServer<TContext
 		this.channels.set(channelName, channel);
 
 		// https://github.com/microsoft/vscode/issues/72531
+		// 对新注册的 channel，满足一下它累积的 pending 请求
 		setTimeout(() => this.flushPendingRequests(channelName), 0);
 	}
 
@@ -374,6 +389,7 @@ export class ChannelServer<TContext = string> implements IChannelServer<TContext
 			return;
 		}
 
+		// 实例化一个取消令牌源，让调用方可以取消执行
 		const cancellationTokenSource = new CancellationTokenSource();
 		let promise: Promise<any>;
 
@@ -404,6 +420,7 @@ export class ChannelServer<TContext = string> implements IChannelServer<TContext
 			this.activeRequests.delete(request.id);
 		});
 
+		// 保存活动请求，让调用方后面可以取消执行
 		const disposable = toDisposable(() => cancellationTokenSource.cancel());
 		this.activeRequests.set(request.id, disposable);
 	}
@@ -417,7 +434,7 @@ export class ChannelServer<TContext = string> implements IChannelServer<TContext
 		}
 
 		const id = request.id;
-		const event = channel.listen(this.ctx, request.name, request.arg);
+		const event = channel.listen(this.ctx, request.name, request.arg); // 监听事件
 		const disposable = event(data => this.sendResponse(<IRawResponse>{ id, data, type: ResponseType.EventFire }));
 
 		this.activeRequests.set(request.id, disposable);
@@ -444,6 +461,7 @@ export class ChannelServer<TContext = string> implements IChannelServer<TContext
 			console.error(`Unknown channel: ${request.channelName}`);
 
 			if (request.type === RequestType.Promise) {
+				// 对已超时的请求发送错误响应
 				this.sendResponse(<IRawResponse>{
 					id: request.id,
 					data: { name: 'Unknown channel', message: `Channel name '${request.channelName}' timed out after ${this.timeoutDelay}ms`, stack: undefined },
@@ -468,6 +486,7 @@ export class ChannelServer<TContext = string> implements IChannelServer<TContext
 				}
 			}
 
+			// 真地清空此 channel 下的所有 pending 请求
 			this.pendingRequests.delete(channelName);
 		}
 	}
@@ -495,9 +514,9 @@ export interface IIPCLogger {
 export class ChannelClient implements IChannelClient, IDisposable {
 
 	private isDisposed: boolean = false;
-	private state: State = State.Uninitialized;
+	private state: State = State.Uninitialized; // 状态是未初始化还是空闲
 	private activeRequests = new Set<IDisposable>();
-	private handlers = new Map<number, IHandler>();
+	private handlers = new Map<number, IHandler>(); // 响应处理器
 	private lastRequestId: number = 0;
 	private protocolListener: IDisposable | null;
 	private logger: IIPCLogger | null;
@@ -506,10 +525,12 @@ export class ChannelClient implements IChannelClient, IDisposable {
 	readonly onDidInitialize = this._onDidInitialize.event;
 
 	constructor(private protocol: IMessagePassingProtocol, logger: IIPCLogger | null = null) {
+		// 监听以接收服务端发送过来的消息
 		this.protocolListener = this.protocol.onMessage(msg => this.onBuffer(msg));
 		this.logger = logger;
 	}
 
+	// 获取指定名字的 channel，无须注册，无须查询服务端
 	getChannel<T extends IChannel>(channelName: string): T {
 		const that = this;
 
@@ -530,7 +551,7 @@ export class ChannelClient implements IChannelClient, IDisposable {
 	}
 
 	private requestPromise(channelName: string, name: string, arg?: any, cancellationToken = CancellationToken.None): Promise<any> {
-		const id = this.lastRequestId++;
+		const id = this.lastRequestId++; // 请求 ID 是递增得到的
 		const type = RequestType.Promise;
 		const request: IRawRequest = { id, type, channelName, name, arg };
 
@@ -555,6 +576,7 @@ export class ChannelClient implements IChannelClient, IDisposable {
 
 						case ResponseType.PromiseError: {
 							this.handlers.delete(id);
+							// 把错误响应转换成 Error 类型实例
 							const error = new Error(response.data.message);
 							(<any>error).stack = response.data.stack;
 							error.name = response.data.name;
@@ -610,6 +632,7 @@ export class ChannelClient implements IChannelClient, IDisposable {
 		let uninitializedPromise: CancelablePromise<void> | null = null;
 
 		const emitter = new Emitter<any>({
+			// 第一次添加 listener 时才会发送事件监听请求给服务端
 			onFirstListenerAdd: () => {
 				uninitializedPromise = createCancelablePromise(_ => this.whenInitialized());
 				uninitializedPromise.then(() => {
@@ -618,6 +641,7 @@ export class ChannelClient implements IChannelClient, IDisposable {
 					this.sendRequest(request);
 				});
 			},
+			// 移除最后一个 listener 时才会发送取消事件监听请求给服务端
 			onLastListenerRemove: () => {
 				if (uninitializedPromise) {
 					uninitializedPromise.cancel();
@@ -741,6 +765,7 @@ export interface ClientConnectionEvent {
 	onDidClientDisconnect: Event<void>;
 }
 
+// Connection 包含服务端信道和客户端信道，是双向通信信道
 interface Connection<TContext> extends Client<TContext> {
 	readonly channelServer: ChannelServer<TContext>;
 	readonly channelClient: ChannelClient;
@@ -777,11 +802,12 @@ export class IPCServer<TContext = string> implements IChannelServer<TContext>, I
 
 			onFirstMessage(msg => {
 				const reader = new BufferReader(msg);
-				const ctx = deserialize(reader) as TContext;
+				const ctx = deserialize(reader) as TContext; // 客户端发送过来的上下文对象
 
-				const channelServer = new ChannelServer(protocol, ctx);
+				const channelServer = new ChannelServer(protocol, ctx); // 上下文给了信道服务器
 				const channelClient = new ChannelClient(protocol);
 
+				// 把已经注册的 channel 注册给新连接的信道服务器
 				this.channels.forEach((channel, name) => channelServer.registerChannel(name, channel));
 
 				const connection: Connection<TContext> = { channelServer, channelClient, ctx };
@@ -806,6 +832,7 @@ export class IPCServer<TContext = string> implements IChannelServer<TContext>, I
 	 * will be listened to.
 	 */
 	getChannel<T extends IChannel>(channelName: string, router: IClientRouter<TContext>): T;
+	// 客户端选择器，可以根据客户端的上下文对象来选择
 	getChannel<T extends IChannel>(channelName: string, clientFilter: (client: Client<TContext>) => boolean): T;
 	getChannel<T extends IChannel>(channelName: string, routerOrClientFilter: IClientRouter<TContext> | ((client: Client<TContext>) => boolean)): T {
 		const that = this;
@@ -816,12 +843,14 @@ export class IPCServer<TContext = string> implements IChannelServer<TContext>, I
 
 				if (isFunction(routerOrClientFilter)) {
 					// when no router is provided, we go random client picking
+					// 随机选择满足选择条件的客户端
 					let connection = getRandomElement(that.connections.filter(routerOrClientFilter));
 
 					connectionPromise = connection
 						// if we found a client, let's call on it
 						? Promise.resolve(connection)
 						// else, let's wait for a client to come along
+						// 等待满足选择条件的新添加的客户端
 						: Event.toPromise(Event.filter(that.onDidAddConnection, routerOrClientFilter));
 				} else {
 					connectionPromise = routerOrClientFilter.routeCall(that, command, arg);
@@ -835,6 +864,7 @@ export class IPCServer<TContext = string> implements IChannelServer<TContext>, I
 			},
 			listen(event: string, arg: any): Event<T> {
 				if (isFunction(routerOrClientFilter)) {
+					// 监听所有满足选择条件的客户端的事件
 					return that.getMulticastEvent(channelName, routerOrClientFilter, event, arg);
 				}
 
@@ -903,6 +933,8 @@ export class IPCServer<TContext = string> implements IChannelServer<TContext>, I
 		this.channels.set(channelName, channel);
 
 		this._connections.forEach(connection => {
+			// 为每个客户端连接的信道服务端都注册此 channel
+			// 那服务端信道处理请求时怎么知道是哪个客户端发送来的？应该是用 ctx 上下文对象来区分
 			connection.channelServer.registerChannel(channelName, channel);
 		});
 	}
@@ -921,25 +953,28 @@ export class IPCServer<TContext = string> implements IChannelServer<TContext>, I
  * As the owner of a protocol, you should extend both this
  * and the `IPCClient` classes to get IPC implementations
  * for your protocol.
+ * IPCClient 是 IPC 的客户端，但是也可以被服务端调用
  */
 export class IPCClient<TContext = string> implements IChannelClient, IChannelServer<TContext>, IDisposable {
 
-	private channelClient: ChannelClient;
-	private channelServer: ChannelServer<TContext>;
+	private channelClient: ChannelClient; // 用于调用服务端
+	private channelServer: ChannelServer<TContext>; // 用于接受服务端的调用
 
 	constructor(protocol: IMessagePassingProtocol, ctx: TContext, ipcLogger: IIPCLogger | null = null) {
 		const writer = new BufferWriter();
 		serialize(writer, ctx);
-		protocol.send(writer.buffer);
+		protocol.send(writer.buffer); // 发送此客户端的上下文对象给服务端
 
 		this.channelClient = new ChannelClient(protocol, ipcLogger);
 		this.channelServer = new ChannelServer(protocol, ctx, ipcLogger);
 	}
 
+	// 获得 channel 以调用服务端
 	getChannel<T extends IChannel>(channelName: string): T {
 		return this.channelClient.getChannel(channelName) as T;
 	}
 
+	// 注册 channel 以接受服务端的调用
 	registerChannel(channelName: string, channel: IServerChannel<TContext>): void {
 		this.channelServer.registerChannel(channelName, channel);
 	}
@@ -993,6 +1028,7 @@ export function getNextTickChannel<T extends IChannel>(channel: T): T {
 	} as T;
 }
 
+// 只根据过滤函数来选择客户端的客户端路由器
 export class StaticRouter<TContext = string> implements IClientRouter<TContext> {
 
 	constructor(private fn: (ctx: TContext) => boolean | Promise<boolean>) { }
@@ -1109,6 +1145,7 @@ export namespace ProxyChannel {
 		properties?: Map<string, unknown>;
 	}
 
+	// 包装 channel 为服务
 	export function toService<T>(channel: IChannel, options?: ICreateProxyServiceOptions): T {
 		const disableMarshalling = options && options.disableMarshalling;
 
@@ -1144,6 +1181,7 @@ export namespace ProxyChannel {
 							methodArgs = args;
 						}
 
+						// 不支持 cancellationToken
 						const result = await channel.call(propKey, methodArgs);
 
 						// Revive unless marshalling disabled

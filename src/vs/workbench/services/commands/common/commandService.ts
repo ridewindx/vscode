@@ -38,6 +38,7 @@ export class CommandService extends Disposable implements ICommandService {
 	private _activateStar(): Promise<void> {
 		if (!this._starActivation) {
 			// wait for * activation, limited to at most 30s
+			// 用 * 来激活插件们
 			this._starActivation = Promise.race<any>([
 				this._extensionService.activateByEvent(`*`),
 				timeout(30000)
@@ -49,6 +50,7 @@ export class CommandService extends Disposable implements ICommandService {
 	async executeCommand<T>(id: string, ...args: any[]): Promise<T> {
 		this._logService.trace('CommandService#executeCommand', id);
 
+		// 注意这里的激活插件的 onCommand:<id> 格式
 		const activationEvent = `onCommand:${id}`;
 		const commandIsRegistered = !!CommandsRegistry.getCommand(id);
 

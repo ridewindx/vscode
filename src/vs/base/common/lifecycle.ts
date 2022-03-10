@@ -39,11 +39,13 @@ export interface IDisposableTracker {
 	markAsSingleton(disposable: IDisposable): void;
 }
 
+// 设置 disposable 跟踪器
 export function setDisposableTracker(tracker: IDisposableTracker | null): void {
 	disposableTracker = tracker;
 }
 
 if (TRACK_DISPOSABLES) {
+	// 这段不会被执行到
 	const __is_disposable_tracked__ = '__is_disposable_tracked__';
 	setDisposableTracker(new class implements IDisposableTracker {
 		trackDisposable(x: IDisposable): void {
@@ -116,6 +118,9 @@ export class MultiDisposeError extends Error {
 	}
 }
 
+// Dispose 模式的核心接口
+// 应用 Dispose 模式的类需要实现此接口
+// 实现了此接口的类实例，可称之为 disposable
 export interface IDisposable {
 	dispose(): void;
 }
@@ -124,6 +129,7 @@ export function isDisposable<E extends object>(thing: E): thing is E & IDisposab
 	return typeof (<IDisposable>thing).dispose === 'function' && (<IDisposable>thing).dispose.length === 0;
 }
 
+// dispose 一个 disposable 对象或 disposable 数组/迭代器
 export function dispose<T extends IDisposable>(disposable: T): T;
 export function dispose<T extends IDisposable>(disposable: T | undefined): T | undefined;
 export function dispose<T extends IDisposable, A extends IterableIterator<T> = IterableIterator<T>>(disposables: IterableIterator<T>): A;
@@ -157,12 +163,14 @@ export function dispose<T extends IDisposable>(arg: T | IterableIterator<T> | un
 }
 
 
+// 把传入的多个 disposable 包装成一个组合型 disposable
 export function combinedDisposable(...disposables: IDisposable[]): IDisposable {
 	const parent = toDisposable(() => dispose(disposables));
 	setParentOfDisposables(disposables, parent);
 	return parent;
 }
 
+// 把函数包装成 disposable，后面 dispose 只会调用此函数一次
 export function toDisposable(fn: () => void): IDisposable {
 	const self = trackDisposable({
 		dispose: once(() => {
@@ -173,6 +181,7 @@ export function toDisposable(fn: () => void): IDisposable {
 	return self;
 }
 
+// 存储 disposable 的集合类，它自己是个 disposable，在 dispose 的时候会 dispose 所有添加的子 disposable
 export class DisposableStore implements IDisposable {
 
 	static DISABLE_DISPOSED_WARNING = false;
@@ -222,12 +231,14 @@ export class DisposableStore implements IDisposable {
 			return o;
 		}
 		if ((o as unknown as DisposableStore) === this) {
+			// 不能注册自己
 			throw new Error('Cannot register a disposable on itself!');
 		}
 
 		setParentOfDisposable(o, this);
 		if (this._isDisposed) {
 			if (!DisposableStore.DISABLE_DISPOSED_WARNING) {
+				// 警告日志，不能添加 disposable 了，否则它将泄露
 				console.warn(new Error('Trying to add a disposable to a DisposableStore that has already been disposed of. The added object will be leaked!').stack);
 			}
 		} else {
@@ -238,8 +249,12 @@ export class DisposableStore implements IDisposable {
 	}
 }
 
+// 抽象类，内含了 DisposableStore 实例
+// 和 DisposableStore 不一样的地方在于，Disposable 是抽象类，用于被继承；
+// 继承它的子类可以调用 _register 方法来添加 disposable
 export abstract class Disposable implements IDisposable {
 
+	// dispose 时不做任何事情的 disposable，通常作为占位符用于需要 IDisposable 的地方
 	static readonly None = Object.freeze<IDisposable>({ dispose() { } });
 
 	protected readonly _store = new DisposableStore();
@@ -257,6 +272,7 @@ export abstract class Disposable implements IDisposable {
 
 	protected _register<T extends IDisposable>(o: T): T {
 		if ((o as unknown as Disposable) === this) {
+			// 不能注册自己
 			throw new Error('Cannot register a disposable on itself!');
 		}
 		return this._store.add(o);
@@ -265,6 +281,7 @@ export abstract class Disposable implements IDisposable {
 
 /**
  * Manages the lifecycle of a disposable value that may be changed.
+ * 可变 disposable，也就是可以丢弃旧的 disposable 而换成新的 disposable
  *
  * This ensures that when the disposable value is changed, the previously held disposable is disposed of. You can
  * also register a `MutableDisposable` on a `Disposable` to ensure it is automatically cleaned up.
@@ -281,12 +298,13 @@ export class MutableDisposable<T extends IDisposable> implements IDisposable {
 		return this._isDisposed ? undefined : this._value;
 	}
 
+	// 设置新的 disposable
 	set value(value: T | undefined) {
 		if (this._isDisposed || value === this._value) {
 			return;
 		}
 
-		this._value?.dispose();
+		this._value?.dispose(); // dispose 旧的 disposable
 		if (value) {
 			setParentOfDisposable(value, this);
 		}
@@ -307,6 +325,7 @@ export class MutableDisposable<T extends IDisposable> implements IDisposable {
 	/**
 	 * Clears the value, but does not dispose it.
 	 * The old value is returned.
+	 * 把子 disposable 从此实例中泄露出来
 	*/
 	clearAndLeak(): T | undefined {
 		const oldValue = this._value;
@@ -318,6 +337,7 @@ export class MutableDisposable<T extends IDisposable> implements IDisposable {
 	}
 }
 
+// 引用计数 disposable
 export class RefCountedDisposable {
 
 	private _counter: number = 1;
@@ -368,24 +388,32 @@ export class SafeDisposable implements IDisposable {
 	}
 }
 
+// 引用对象接口，调用 dispose 方法就是消减一次引用
 export interface IReference<T> extends IDisposable {
 	readonly object: T;
 }
 
+// 引用对象集合抽象类
 export abstract class ReferenceCollection<T> {
 
 	private readonly references: Map<string, { readonly object: T; counter: number }> = new Map();
 
+	// acquire 一次 key 对应的被引用对象，dispose 一次则消减此引用
+	// 对于指定 key 而言，acquire 和 dispose 是成对的
+	// key 对应的被引用对象不存在时，可以构造
 	acquire(key: string, ...args: any[]): IReference<T> {
+		// key 是被引用对象的标识
 		let reference = this.references.get(key);
 
 		if (!reference) {
+			// 构造被引用对象
 			reference = { counter: 0, object: this.createReferencedObject(key, ...args) };
 			this.references.set(key, reference);
 		}
 
 		const { object } = reference;
 		const dispose = once(() => {
+			// 引用计数为 0 时，就会 destroy 此被引用对象
 			if (--reference!.counter === 0) {
 				this.destroyReferencedObject(key, reference!.object);
 				this.references.delete(key);
@@ -394,6 +422,7 @@ export abstract class ReferenceCollection<T> {
 
 		reference.counter++;
 
+		// 既返回被引用对象，也返回 dispose 函数，它可用于递减一次引用计数
 		return { object, dispose };
 	}
 
@@ -420,17 +449,19 @@ export class AsyncReferenceCollection<T> {
 				dispose: () => ref.dispose()
 			};
 		} catch (error) {
-			ref.dispose();
+			ref.dispose(); // 即使被引用对象 promise 被 reject，也 dispose 引用
 			throw error;
 		}
 	}
 }
 
+// 永远不会消减引用的引用对象类
 export class ImmortalReference<T> implements IReference<T> {
 	constructor(public object: T) { }
 	dispose(): void { /* noop */ }
 }
 
+// 执行传入的函数，函数入场是 DisposableStore 实例，函数执行完后会自动 dispose 此 DisposableStore 实例
 export function disposeOnReturn(fn: (store: DisposableStore) => void): void {
 	const store = new DisposableStore();
 	try {

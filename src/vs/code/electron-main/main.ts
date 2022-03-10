@@ -86,12 +86,13 @@ class CodeMain {
 		// default electron error dialog popping up
 		setUnexpectedErrorHandler(err => console.error(err));
 
-		// Create services
+		// Create services 手动创建必要的服务
+		// instantiationService 是服务容器，是服务依赖注入机制的管理器
 		const [instantiationService, instanceEnvironment, environmentMainService, configurationService, stateMainService, bufferLogService, productService] = this.createServices();
 
 		try {
 
-			// Init services
+			// Init services 初始化服务
 			try {
 				await this.initServices(environmentMainService, configurationService, stateMainService);
 			} catch (error) {
@@ -111,6 +112,8 @@ class CodeMain {
 				// Create the main IPC server by trying to be the server
 				// If this throws an error it means we are not the first
 				// instance of VS Code running and so we would quit.
+				// 创建主进程 IPC 服务端
+				// 如果抛错，则说明已经存在 VS Code 实例，我们应该通过 IPC 告诉它创建新窗口，退出此进程
 				const mainProcessNodeIpcServer = await this.claimInstance(logService, environmentMainService, lifecycleMainService, instantiationService, productService, true);
 
 				// Write a lockfile to indicate an instance is running (https://github.com/microsoft/vscode/issues/127861#issuecomment-877417451)
@@ -119,10 +122,12 @@ class CodeMain {
 				});
 
 				// Delay creation of spdlog for perf reasons (https://github.com/microsoft/vscode/issues/72906)
+				// 这里设置 logger 为 spdlog
 				bufferLogService.logger = new SpdLogLogger('main', join(environmentMainService.logsPath, 'main.log'), true, false, bufferLogService.getLevel());
 
 				// Lifecycle
 				once(lifecycleMainService.onWillShutdown)(evt => {
+					// VS Code 将要关闭时的清理
 					fileService.dispose();
 					configurationService.dispose();
 					evt.join(FSPromises.unlink(environmentMainService.mainLockfile).catch(() => { /* ignored */ }));
@@ -136,9 +141,10 @@ class CodeMain {
 	}
 
 	private createServices(): [IInstantiationService, IProcessEnvironment, IEnvironmentMainService, ConfigurationService, StateMainService, BufferLogService, IProductService] {
+		// 定义服务集合实例
 		const services = new ServiceCollection();
 
-		// Product
+		// Product 设置 productService 服务
 		const productService = { _serviceBrand: undefined, ...product };
 		services.set(IProductService, productService);
 
@@ -150,18 +156,22 @@ class CodeMain {
 		// Log: We need to buffer the spdlog logs until we are sure
 		// we are the only instance running, otherwise we'll have concurrent
 		// log file access on Windows (https://github.com/microsoft/vscode/issues/41218)
+		// 缓存日志服务，这里没有设置 logger 为 spdlog，后面会设置
 		const bufferLogService = new BufferLogService();
+		// 日志聚合器服务，同时打印日志到控制台和日志文件
 		const logService = new MultiplexLogService([new ConsoleMainLogger(getLogLevel(environmentMainService)), bufferLogService]);
 		process.once('exit', () => logService.dispose());
+		// 日志器服务
 		services.set(ILogService, logService);
 
 		// Files
 		const fileService = new FileService(logService);
 		services.set(IFileService, fileService);
 		const diskFileSystemProvider = new DiskFileSystemProvider(logService);
+		// 注册 file 这个 scheme 的 provider 为磁盘文件系统提供者
 		fileService.registerProvider(Schemas.file, diskFileSystemProvider);
 
-		// Logger
+		// Logger 日志器管理服务，可以创建更多文件日志器，共享上面 logService 的日志级别
 		services.set(ILoggerService, new LoggerService(logService, fileService));
 
 		// Configuration
@@ -171,17 +181,17 @@ class CodeMain {
 		// Lifecycle
 		services.set(ILifecycleMainService, new SyncDescriptor(LifecycleMainService));
 
-		// State
+		// State 状态服务
 		const stateMainService = new StateMainService(environmentMainService, logService, fileService);
 		services.set(IStateMainService, stateMainService);
 
-		// Request
+		// Request 网络请求服务
 		services.set(IRequestService, new SyncDescriptor(RequestMainService));
 
-		// Themes
+		// Themes 主题服务
 		services.set(IThemeMainService, new SyncDescriptor(ThemeMainService));
 
-		// Signing
+		// Signing 签名服务
 		services.set(ISignService, new SyncDescriptor(SignService));
 
 		// Tunnel
@@ -214,6 +224,7 @@ class CodeMain {
 		return Promises.settled<unknown>([
 
 			// Environment service (paths)
+			// 创建必需的目录
 			Promise.all<string | undefined>([
 				environmentMainService.extensionsPath,
 				environmentMainService.codeCachePath,
@@ -258,6 +269,7 @@ class CodeMain {
 			// there's a running instance, let's connect to it
 			let client: NodeIPCClient<string>;
 			try {
+				// 创建 IPC 客户端，连接已启动实例
 				client = await nodeIPCConnect(environmentMainService.mainIPCHandle, 'main');
 			} catch (error) {
 
@@ -316,6 +328,7 @@ class CodeMain {
 
 			// Process Info
 			if (environmentMainService.args.status) {
+				// 如果传递了 --status，则打印已启动实例的一些信息
 				return instantiationService.invokeFunction(async () => {
 					const diagnosticsService = new DiagnosticsService(NullTelemetryService, productService);
 					const mainProcessInfo = await otherInstanceLaunchMainService.getMainProcessInfo();
@@ -323,6 +336,7 @@ class CodeMain {
 					const diagnostics = await diagnosticsService.getDiagnostics(mainProcessInfo, remoteDiagnostics);
 					console.log(diagnostics);
 
+					// 打印完就退出进程
 					throw new ExpectedError();
 				});
 			}
@@ -333,6 +347,7 @@ class CodeMain {
 			}
 
 			// Send environment over...
+			// 把命令行参数和环境变量都通过 IPC 告诉已启动实例去 launch 一个新窗口
 			logService.trace('Sending env to running instance...');
 			await otherInstanceLaunchMainService.start(environmentMainService.args, process.env as IProcessEnvironment);
 
@@ -410,6 +425,7 @@ class CodeMain {
 
 		if (reason) {
 			if ((reason as ExpectedError).isExpected) {
+				// 期望的错误
 				if (reason.message) {
 					logService.trace(reason.message);
 				}

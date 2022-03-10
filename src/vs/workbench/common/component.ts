@@ -7,6 +7,8 @@ import { Memento, MementoObject } from 'vs/workbench/common/memento';
 import { IThemeService, Themable } from 'vs/platform/theme/common/themeService';
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 
+// 组件基类
+// 注意其 id 是大多数子类都需要明确定义的静态字符串标识，代表组件的类别
 export class Component extends Themable {
 
 	private readonly memento: Memento;

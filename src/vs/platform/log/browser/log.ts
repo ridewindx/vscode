@@ -26,6 +26,7 @@ function logLevelToString(level: LogLevel): string {
  * A logger that is used when VSCode is running in the web with
  * an automation such as playwright. We expect a global codeAutomationLog
  * to be defined that we can use to log to.
+ * 只在某些自动化环境暴露 codeAutomationLog 全局变量时才输出日志
  */
 export class ConsoleLogInAutomationLogger extends AdapterLogger implements ILogger {
 

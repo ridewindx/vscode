@@ -57,6 +57,7 @@
 		const timeout = setTimeout(() => { console.error(`[resolve window config] Could not resolve window configuration within 10 seconds, but will continue to wait...`); }, 10000);
 		performance.mark('code/willWaitForWindowConfig');
 		/** @type {ISandboxConfiguration} */
+			// 获取 preload.js 中得到的 configuration
 		const configuration = await preloadGlobals.context.resolveConfiguration();
 		performance.mark('code/didWaitForWindowConfig');
 		clearTimeout(timeout);

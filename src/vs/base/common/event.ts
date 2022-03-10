@@ -28,12 +28,17 @@ let _enableSnapshotPotentialLeakWarning = false;
 /**
  * To an event a function with one or zero parameters
  * can be subscribed. The event is the subscriber function itself.
+ * Event 就是一个函数，理解为 event.addListener()，第一个入参是订阅函数或监听函数，它的入参为一个对象；
+ * 每次事件被触发，就会调用此订阅函数，且若 thisArgs 非空，则它被作为 this，否则把 undefined 作为 this；
+ * Event 函数调用返回的 disposable 用于取消订阅，相当于 event.removeListener()；
+ * 若 disposables 非空，返回的 disposable 也会被添加入 disposables，所以 disposables 相当于是清理器，以防忘记移除 listener
  */
 export interface Event<T> {
 	(listener: (e: T) => any, thisArgs?: any, disposables?: IDisposable[] | DisposableStore): IDisposable;
 }
 
 export namespace Event {
+	// 永远不会触发的事件
 	export const None: Event<any> = () => Disposable.None;
 
 
@@ -392,8 +397,11 @@ export namespace Event {
 		removeEventListener(event: string | symbol, listener: Function): void;
 	}
 
+	// 把 DOM 事件转换为 Event
+	// map 是事件结果转换函数
 	export function fromDOMEventEmitter<T>(emitter: DOMEventEmitter, eventName: string, map: (...args: any[]) => T = id => id): Event<T> {
 		const fn = (...args: any[]) => result.fire(map(...args));
+		// 很巧妙地完成对 DOM 事件的监听和取消监听
 		const onFirstListenerAdd = () => emitter.addEventListener(eventName, fn);
 		const onLastListenerRemove = () => emitter.removeEventListener(eventName, fn);
 		const result = new Emitter<T>({ onFirstListenerAdd, onLastListenerRemove });
@@ -429,10 +437,10 @@ export namespace Event {
 }
 
 export interface EmitterOptions {
-	onFirstListenerAdd?: Function;
-	onFirstListenerDidAdd?: Function;
-	onListenerDidAdd?: Function;
-	onLastListenerRemove?: Function;
+	onFirstListenerAdd?: Function; // 添加第一个 listener 前调用
+	onFirstListenerDidAdd?: Function; // 添加第一个 listener 后调用
+	onListenerDidAdd?: Function; // 每次添加 listener 后调用
+	onLastListenerRemove?: Function; // 移除最后一个 listener 后调用
 	leakWarningThreshold?: number;
 
 	/** ONLY enable this during development */
@@ -573,6 +581,8 @@ class Listener<T> {
 /**
  * The Emitter can be used to expose an Event to the public
  * to fire it from the insides.
+ * 事件发射器，其 event 成员用于添加事件订阅函数，fire 方法用于触发事件
+ * 需要注意的是，fire 会同步依次执行已经添加的事件订阅函数
  * Sample:
 	class Document {
 
@@ -647,7 +657,7 @@ export class Emitter<T> {
 	 * to events from this Emitter
 	 */
 	get event(): Event<T> {
-		if (!this._event) {
+		if (!this._event) { // 延迟实例化
 			this._event = (callback: (e: T) => any, thisArgs?: any, disposables?: IDisposable[] | DisposableStore) => {
 				if (!this._listeners) {
 					this._listeners = new LinkedList();
@@ -686,7 +696,7 @@ export class Emitter<T> {
 					if (removeMonitor) {
 						removeMonitor();
 					}
-					if (!this._disposed) {
+					if (!this._disposed) { // 若此 Emitter 还没 dispose
 						removeListener();
 						if (this._options && this._options.onLastListenerRemove) {
 							const hasListeners = (this._listeners && !this._listeners.isEmpty());

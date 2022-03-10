@@ -39,8 +39,8 @@ export interface ICommandAction {
 	tooltip?: string | ILocalizedString;
 	icon?: Icon;
 	source?: string;
-	precondition?: ContextKeyExpression;
-	toggled?: ContextKeyExpression | { condition: ContextKeyExpression; icon?: Icon; tooltip?: string; title?: string | ILocalizedString };
+	precondition?: ContextKeyExpression; // 匹配上下文以是否使能 enabled 此命令
+	toggled?: ContextKeyExpression | { condition: ContextKeyExpression; icon?: Icon; tooltip?: string; title?: string | ILocalizedString }; // 匹配上下文以是否 checked 此命令
 }
 
 export type ISerializableCommandAction = UriDto<ICommandAction>;

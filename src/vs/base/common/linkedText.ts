@@ -6,15 +6,16 @@
 import { memoize } from 'vs/base/common/decorators';
 
 export interface ILink {
-	readonly label: string;
-	readonly href: string;
-	readonly title?: string;
+	readonly label: string; // 中括号里的
+	readonly href: string; // 小括号里第一部分的以 http:// 或 https:// 或 command: 开头的
+	readonly title?: string; // 小括号里第二部分引号里的
 }
 
 export type LinkedTextNode = string | ILink;
 
 export class LinkedText {
 
+	// nodes 是解析后的一个个节点，可以是文本，也可以是 ILink
 	constructor(readonly nodes: LinkedTextNode[]) { }
 
 	@memoize
@@ -25,6 +26,7 @@ export class LinkedText {
 
 const LINK_REGEX = /\[([^\]]+)\]\(((?:https?:\/\/|command:|file:)[^\)\s]+)(?: ("|')([^\3]+)(\3))?\)/gi;
 
+// 将类似 Markdown 中链接表示形式的文本解析为链接文本类实例
 export function parseLinkedText(text: string): LinkedText {
 	const result: LinkedTextNode[] = [];
 

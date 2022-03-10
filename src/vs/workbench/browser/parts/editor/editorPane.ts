@@ -29,6 +29,7 @@ import { ITextResourceConfigurationService } from 'vs/editor/common/services/tex
  * Editors are layed out in the editor part of the workbench in editor groups. Multiple editors can be
  * open at the same time. Each editor has a minimized representation that is good enough to provide some
  * information about the state of the editor data.
+ * 主编辑区域的编辑器的基类
  *
  * The workbench will keep an editor alive after it has been created and show/hide it based on
  * user interaction. The lifecycle of a editor goes in the order:
@@ -56,6 +57,7 @@ export abstract class EditorPane extends Composite implements IEditorPane {
 
 	//#endregion
 
+	// 全局静态的存储 editor 状态的 map
 	private static readonly EDITOR_MEMENTOS = new Map<string, EditorMemento<any>>();
 
 	get minimumWidth() { return DEFAULT_EDITOR_MIN_DIMENSIONS.width; }
@@ -69,6 +71,7 @@ export abstract class EditorPane extends Composite implements IEditorPane {
 	protected _options: IEditorOptions | undefined;
 	get options(): IEditorOptions | undefined { return this._options; }
 
+	// 所在的 editor group，可以为空
 	private _group: IEditorGroup | undefined;
 	get group(): IEditorGroup | undefined { return this._group; }
 
@@ -86,6 +89,7 @@ export abstract class EditorPane extends Composite implements IEditorPane {
 		super(id, telemetryService, themeService, storageService);
 	}
 
+	// 传入父 HTMLElement
 	override create(parent: HTMLElement): void {
 		super.create(parent);
 
@@ -96,6 +100,7 @@ export abstract class EditorPane extends Composite implements IEditorPane {
 	/**
 	 * Called to create the editor in the parent HTMLElement. Subclasses implement
 	 * this method to construct the editor widget.
+	 * 在父 HTMLElement 中创建 editor 组件
 	 */
 	protected abstract createEditor(parent: HTMLElement): void;
 
@@ -162,6 +167,7 @@ export abstract class EditorPane extends Composite implements IEditorPane {
 		this._group = group;
 	}
 
+	// key 一般是常量字符串，表示不同的状态大类别
 	protected getEditorMemento<T>(editorGroupService: IEditorGroupsService, configurationService: ITextResourceConfigurationService, key: string, limit: number = 10): IEditorMemento<T> {
 		const mementoKey = `${this.getId()}${key}`;
 
@@ -204,6 +210,9 @@ interface MapGroupToMemento<T> {
 	[group: GroupIdentifier]: T;
 }
 
+// 记录 editor 的状态
+// 参见 https://code.visualstudio.com/docs/getstarted/settings 的
+// workbench.editor.restoreViewState 和 workbench.editor.sharedViewState
 export class EditorMemento<T> extends Disposable implements IEditorMemento<T> {
 
 	private static readonly SHARED_EDITOR_STATE = -1; // pick a number < 0 to be outside group id range
@@ -216,10 +225,10 @@ export class EditorMemento<T> extends Disposable implements IEditorMemento<T> {
 	constructor(
 		readonly id: string,
 		private key: string,
-		private memento: MementoObject,
+		private memento: MementoObject, // 来自 StorageService，因此会持久化
 		private limit: number,
 		private editorGroupService: IEditorGroupsService,
-		private configurationService: ITextResourceConfigurationService
+		private configurationService: ITextResourceConfigurationService // settings 设置服务
 	) {
 		super();
 
@@ -253,10 +262,12 @@ export class EditorMemento<T> extends Disposable implements IEditorMemento<T> {
 		}
 
 		// Store state for group
+		// 记录此 editor 的状态到其目前所在的 editor group
 		mementosForResource[group.id] = state;
 
 		// Store state as most recent one based on settings
 		if (this.shareEditorState) {
+			// 记录此 editor 的状态到共享组（组号为 -1）
 			mementosForResource[EditorMemento.SHARED_EDITOR_STATE] = state;
 		}
 
@@ -282,11 +293,13 @@ export class EditorMemento<T> extends Disposable implements IEditorMemento<T> {
 
 			// Return state for group if present
 			if (mementoForResourceAndGroup) {
+				// 返回此 editor 在这个 editor group 下的状态
 				return mementoForResourceAndGroup;
 			}
 
 			// Return most recent state based on settings otherwise
 			if (this.shareEditorState) {
+				// 返回此 editor 在共享组的状态
 				return mementosForResource[EditorMemento.SHARED_EDITOR_STATE];
 			}
 		}
@@ -337,6 +350,7 @@ export class EditorMemento<T> extends Disposable implements IEditorMemento<T> {
 		}
 	}
 
+	// 把状态从 source 移动到 target；若 source 是父 URI，则移动其所有子 URI
 	moveEditorState(source: URI, target: URI, comparer: IExtUri): void {
 		const cache = this.doLoad();
 
@@ -378,6 +392,7 @@ export class EditorMemento<T> extends Disposable implements IEditorMemento<T> {
 
 	private doLoad(): LRUCache<string, MapGroupToMemento<T>> {
 		if (!this.cache) {
+			// 最近最少使用型缓存
 			this.cache = new LRUCache<string, MapGroupToMemento<T>>(this.limit);
 
 			// Restore from serialized map state
@@ -407,6 +422,7 @@ export class EditorMemento<T> extends Disposable implements IEditorMemento<T> {
 
 		// Remove groups from states that no longer exist. Since we modify the
 		// cache and its is a LRU cache make a copy to ensure iteration succeeds
+		// 从状态缓存中移除 group 已不存在的情况
 		const entries = [...cache.entries()];
 		for (const [resource, mapGroupToMementos] of entries) {
 			for (const group of Object.keys(mapGroupToMementos)) {

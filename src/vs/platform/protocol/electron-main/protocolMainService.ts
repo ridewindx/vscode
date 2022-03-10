@@ -21,7 +21,7 @@ export class ProtocolMainService extends Disposable implements IProtocolMainServ
 
 	declare readonly _serviceBrand: undefined;
 
-	private readonly validRoots = TernarySearchTree.forPaths<boolean>(!isLinux);
+	private readonly validRoots = TernarySearchTree.forPaths<boolean>(!isLinux); // 只有 Linux 区分文件名大小写
 	private readonly validExtensions = new Set(['.svg', '.png', '.jpg', '.jpeg', '.gif', '.bmp']); // https://github.com/microsoft/vscode/issues/119384
 
 	constructor(

@@ -11,6 +11,7 @@ import { URI } from 'vs/base/common/uri';
 
 export class WebviewProtocolProvider extends Disposable {
 
+	// 对于 vscode-webview，只允许 vs/workbench/contrib/webview/browser/pre 目录下的这四个文件
 	private static validWebviewFilePaths = new Map([
 		['/index.html', 'index.html'],
 		['/fake.html', 'fake.html'],

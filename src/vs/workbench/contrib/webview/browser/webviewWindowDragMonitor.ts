@@ -9,6 +9,7 @@ import { IWebview } from 'vs/workbench/contrib/webview/browser/webview';
 
 /**
  * Allows webviews to monitor when an element in the VS Code editor is being dragged/dropped.
+ * 允许 webview 能检测到 VS Code 中拖拽事件
  *
  * This is required since webview end up eating the drag event. VS Code needs to see this
  * event so it can handle editor element drag drop.

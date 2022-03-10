@@ -203,6 +203,7 @@ export class WindowsMainService extends Disposable implements IWindowsMainServic
 		this._register(this.workspacesManagementMainService.onDidEnterWorkspace(event => this._onDidSignalReadyWindow.fire(event.window)));
 
 		// Update valid roots in protocol service for extension dev windows
+		// 对于扩展开发窗口，给 protocol 服务 addValidFileRoot
 		this._register(this.onDidSignalReadyWindow(window => {
 			if (window.config?.extensionDevelopmentPath || window.config?.extensionTestsPath) {
 				const disposables = new DisposableStore();

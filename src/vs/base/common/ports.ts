@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
- * @returns Returns a random port between 1025 and 65535.
+ * @returns Returns a random port between 1025 and 65535. 随机端口号
  */
 export function randomPort(): number {
 	const min = 1025;

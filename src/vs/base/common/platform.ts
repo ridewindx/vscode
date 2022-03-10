@@ -49,8 +49,8 @@ export interface INodeProcess {
 }
 
 declare const process: INodeProcess;
-declare const global: unknown;
-declare const self: unknown;
+declare const global: unknown; // Node.js 环境中的全局命名空间对象 https://nodejs.org/api/globals.html
+declare const self: unknown; // Web 环境中的 window.self 返回 window 自己
 
 export const globals: any = (typeof self === 'object' ? self : typeof global === 'object' ? global : {});
 
@@ -63,18 +63,18 @@ if (typeof globals.vscode !== 'undefined' && typeof globals.vscode.process !== '
 	nodeProcess = process;
 }
 
-const isElectronProcess = typeof nodeProcess?.versions?.electron === 'string';
-const isElectronRenderer = isElectronProcess && nodeProcess?.type === 'renderer';
-export const isElectronSandboxed = isElectronRenderer && nodeProcess?.sandboxed;
+const isElectronProcess = typeof nodeProcess?.versions?.electron === 'string'; // main 进程或 renderer 进程
+const isElectronRenderer = isElectronProcess && nodeProcess?.type === 'renderer'; // renderer 进程
+export const isElectronSandboxed = isElectronRenderer && nodeProcess?.sandboxed; // 沙盒化的 renderer 进程
 
 interface INavigator {
 	userAgent: string;
 	language: string;
 	maxTouchPoints?: number;
 }
-declare const navigator: INavigator;
+declare const navigator: INavigator; // 只有 Web 环境中有 navigator
 
-// Web environment
+// Web environment 纯 Web 环境或 Electron 渲染进程中的 Web 环境）
 if (typeof navigator === 'object' && !isElectronRenderer) {
 	_userAgent = navigator.userAgent;
 	_isWindows = _userAgent.indexOf('Windows') >= 0;
@@ -86,7 +86,7 @@ if (typeof navigator === 'object' && !isElectronRenderer) {
 	_language = _locale;
 }
 
-// Native environment
+// Native environment 非 Electron 的 Native 环境 / Electron Main 进程环境 / Electron Renderer 进程环境
 else if (typeof nodeProcess === 'object') {
 	_isWindows = (nodeProcess.platform === 'win32');
 	_isMacintosh = (nodeProcess.platform === 'darwin');
@@ -131,7 +131,7 @@ export function PlatformToString(platform: Platform) {
 	}
 }
 
-let _platform: Platform = Platform.Web;
+let _platform: Platform = Platform.Web; // 似乎永远不会取到这个值吧？
 if (_isMacintosh) {
 	_platform = Platform.Mac;
 } else if (_isWindows) {

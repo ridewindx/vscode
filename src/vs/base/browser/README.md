@@ -1,0 +1,3 @@
+- dompurify: HTML 净化器，避免 XSS 攻击 https://github.com/cure53/DOMPurify
+- ui: 各种小 UI 组件
+  - Widget 抽象类，被很多 UI 组件类继承，也被 vs/workbench/contrib 和 vs/editor/contrib 等目录中的组件类继承

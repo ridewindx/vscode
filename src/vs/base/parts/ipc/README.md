@@ -1,0 +1,25 @@
+- Web 协议
+  - Channel Messaging 双向信道消息通信
+    - MessageChannel 创建信道，两个 MessagePort 双向地发送消息和监听消息
+    - https://developer.mozilla.org/zh-CN/docs/Web/API/Channel_Messaging_API
+    - https://developer.mozilla.org/zh-CN/docs/Web/API/Channel_Messaging_API/Using_channel_messaging
+- IPC 调用的抽象实现
+  - 抽象出 IMessagePassingProtocol 通信协议接口（下面有 3 种实现）
+  - IPCClient: 连接特定 IPCServer，基于 channel 进行 call 和 listen
+  - IPCServer: 接收多个 IPCClient 的连接
+    - 调用客户端：使用路由器或客户端过滤函数的 getChannel
+      - call: 调用选择出来的一个客户端（对于满足客户端过滤函数后是随机选择出来一个）
+      - listen: 监听所有选择出来的客户端
+    - 被客户端调用：registerChannel 的 IServerChannel 的 ctx 可以用于识别是哪个客户端
+- 使用 ipcMain 和 ipcRender 的 IPC，适合渲染进程和主进程的 IPC 调用
+  - electron-sandbox/ipc.electron.ts 中实现的 IPCClient
+  - electron-main/ipc.electron.ts 中实现的 IPCServer
+- 使用 Channel Messaging 的 IPC
+  - electron-main/ipc.mp.ts 中实现的 IPCClient
+  - electron-browser/ipc.mp.ts 中实现的 IPCServer
+    - 实现主进程和一个渲染进程之间的 IPC
+  - electron-main/ipc.mp.ts 中的 connect 可以获得的 MessagePortMain，可以被 web page 通过 src/vs/base/parts/ipc/electron-sandbox/ipc.mp.ts 中的 acquirePort 从主进程拿到变成 MessagePort
+    - 实现一个渲染进程的 web page 和另一个渲染进程之间的 IPC
+- 使用 Socket 的 IPC
+  - common/ipc.net.ts 中实现的 IPCClient（Web 中也可以用，也就是 WebSocket）
+  - node/ipc.net.ts 中实现的 IPCClient 和 IPCServer

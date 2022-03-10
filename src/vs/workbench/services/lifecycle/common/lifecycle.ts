@@ -27,9 +27,11 @@ export interface BeforeShutdownEvent {
 	/**
 	 * Allows to veto the shutdown. The veto can be a long running operation but it
 	 * will block the application from closing.
+	 * 决定是否否决关闭行为
 	 *
 	 * @param id to identify the veto operation in case it takes very long or never
 	 * completes.
+	 * id 用于在 value promise 很久还没 settle 时打印日志标识是哪方的 veto
 	 */
 	veto(value: boolean | Promise<boolean>, id: string): void;
 }
@@ -82,6 +84,7 @@ export interface WillShutdownEvent {
 	/**
 	 * Allows to join the shutdown. The promise can be a long running operation but it
 	 * will block the application from closing.
+	 * 将要关闭前 join 等待传入的 promise
 	 *
 	 * @param id to identify the join operation in case it takes very long or never
 	 * completes.
@@ -225,6 +228,7 @@ export interface ILifecycleService {
 	/**
 	 * Returns a promise that resolves when a certain lifecycle phase
 	 * has started.
+	 * 等待进入指定阶段；若已进入，则立即返回
 	 */
 	when(phase: LifecyclePhase): Promise<void>;
 

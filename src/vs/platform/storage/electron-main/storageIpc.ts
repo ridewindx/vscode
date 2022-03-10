@@ -12,9 +12,10 @@ import { IStorageChangeEvent, IStorageMain } from 'vs/platform/storage/electron-
 import { IStorageMainService } from 'vs/platform/storage/electron-main/storageMainService';
 import { reviveIdentifier, IEmptyWorkspaceIdentifier, ISingleFolderWorkspaceIdentifier, IWorkspaceIdentifier } from 'vs/platform/workspace/common/workspace';
 
+// 把 IStorageMainService 包装成 IServerChannel 供客户端使用
 export class StorageDatabaseChannel extends Disposable implements IServerChannel {
 
-	private static readonly STORAGE_CHANGE_DEBOUNCE_TIME = 100;
+	private static readonly STORAGE_CHANGE_DEBOUNCE_TIME = 100; // debounce 时间为 0.1s
 
 	private readonly _onDidChangeGlobalStorage = this._register(new Emitter<ISerializableItemsChangeEvent>());
 	private readonly onDidChangeGlobalStorage = this._onDidChangeGlobalStorage.event;

@@ -6,6 +6,7 @@
 import { isThenable, Promises } from 'vs/base/common/async';
 
 // Shared veto handling across main and renderer
+// 只要有一个否决，或有 promise 抛错，则返回否决
 export function handleVetos(vetos: (boolean | Promise<boolean>)[], onError: (error: Error) => void): Promise<boolean /* veto */> {
 	if (vetos.length === 0) {
 		return Promise.resolve(false);

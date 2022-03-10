@@ -82,7 +82,7 @@ enum StorageState {
 
 export class Storage extends Disposable implements IStorage {
 
-	private static readonly DEFAULT_FLUSH_DELAY = 100;
+	private static readonly DEFAULT_FLUSH_DELAY = 100; // 0.1s
 
 	private readonly _onDidChangeStorage = this._register(new Emitter<string>());
 	readonly onDidChangeStorage = this._onDidChangeStorage.event;
@@ -117,6 +117,7 @@ export class Storage extends Disposable implements IStorage {
 		// items that change external require us to update our
 		// caches with the values. we just accept the value and
 		// emit an event if there is a change.
+		// 对于从外部变更的条目，更新这里的 cache 并触发事件
 		e.changed?.forEach((value, key) => this.accept(key, value));
 		e.deleted?.forEach(key => this.accept(key, undefined));
 	}

@@ -17,14 +17,16 @@ import { BrandedService, createDecorator, IConstructorSignature, ServicesAccesso
 import { IKeybindingRule, IKeybindings, KeybindingsRegistry } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { ThemeIcon } from 'vs/platform/theme/common/themeService';
 
+// 菜单项
 export interface IMenuItem {
 	command: ICommandAction;
 	alt?: ICommandAction;
-	when?: ContextKeyExpression;
-	group?: 'navigation' | string;
-	order?: number;
+	when?: ContextKeyExpression; // 必须满足此上下文表达式
+	group?: 'navigation' | string; // 分组
+	order?: number; // 排序用
 }
 
+// 子菜单项；下辖子菜单
 export interface ISubmenuItem {
 	title: string | ICommandActionTitle;
 	submenu: MenuId;
@@ -165,9 +167,9 @@ export class MenuId {
 }
 
 export interface IMenuActionOptions {
-	arg?: any;
-	shouldForwardArgs?: boolean;
-	renderShortTitle?: boolean;
+	arg?: any; // 传给 command 的第一个 arg
+	shouldForwardArgs?: boolean; // 是否透传 run 时传入的 args
+	renderShortTitle?: boolean; // 在存在 shortTitle 时是否使用它作为 label
 }
 
 export interface IMenu extends IDisposable {
@@ -178,8 +180,8 @@ export interface IMenu extends IDisposable {
 export const IMenuService = createDecorator<IMenuService>('menuService');
 
 export interface IMenuCreateOptions {
-	emitEventsForSubmenuChanges?: boolean;
-	eventDebounceDelay?: number;
+	emitEventsForSubmenuChanges?: boolean; // 当上下文键影响子菜单时，是否触发事件
+	eventDebounceDelay?: number; // 事件触发后延迟多少 ms 执行处理函数
 }
 
 export interface IMenuService {
@@ -192,7 +194,7 @@ export interface IMenuService {
 export type ICommandsMap = Map<string, ICommandAction>;
 
 export interface IMenuRegistryChangeEvent {
-	has(id: MenuId): boolean;
+	has(id: MenuId): boolean; // 指定的菜单发生了注册变更事件
 }
 
 export interface IMenuRegistry {
@@ -226,7 +228,7 @@ export const MenuRegistry: IMenuRegistry = new class implements IMenuRegistry {
 		for (const command of commands) {
 			this._commands.set(command.id, command);
 		}
-		this._onDidChangeMenu.fire(this._commandPaletteChangeEvent);
+		this._onDidChangeMenu.fire(this._commandPaletteChangeEvent); // 添加命令会影响 CommandPalette 菜单
 		return toDisposable(() => {
 			let didChange = false;
 			for (const command of commands) {
@@ -299,7 +301,7 @@ export const MenuRegistry: IMenuRegistry = new class implements IMenuRegistry {
 		const set = new Set<string>();
 
 		for (const item of result) {
-			if (isIMenuItem(item)) {
+			if (isIMenuItem(item)) { // 只关注直接菜单项，而忽略子菜单
 				set.add(item.command.id);
 				if (item.alt) {
 					set.add(item.alt.id);
@@ -333,7 +335,7 @@ export class SubmenuItemAction extends SubmenuAction {
 		for (const [, actions] of groups) {
 			if (actions.length > 0) {
 				result.push(...actions);
-				result.push(new Separator());
+				result.push(new Separator()); // 每个 group 都用分隔线分隔
 			}
 		}
 		if (result.length) {
@@ -402,6 +404,7 @@ export class MenuItemAction implements IAction {
 		// to bridge into the rendering world.
 	}
 
+	// 执行 command
 	run(...args: any[]): Promise<void> {
 		let runArgs: any[] = [];
 
@@ -487,7 +490,7 @@ type OneOrN<T> = T | T[];
 export interface IAction2Options extends ICommandAction {
 
 	/**
-	 * Shorthand to add this command to the command palette
+	 * Shorthand to add this command to the command palette 是否添加此命令到命令选项板
 	 */
 	f1?: boolean;
 

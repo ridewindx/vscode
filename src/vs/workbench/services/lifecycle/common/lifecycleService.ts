@@ -62,6 +62,7 @@ export abstract class AbstractLifecycleService extends Disposable implements ILi
 	private resolveStartupKind(): StartupKind {
 
 		// Retrieve and reset last shutdown reason
+		// 获取上次关闭的原因
 		const lastShutdownReason = this.storageService.getNumber(AbstractLifecycleService.LAST_SHUTDOWN_REASON_KEY, StorageScope.WORKSPACE);
 		this.storageService.remove(AbstractLifecycleService.LAST_SHUTDOWN_REASON_KEY, StorageScope.WORKSPACE);
 

@@ -87,6 +87,7 @@ export class WebviewMainService extends Disposable implements IWebviewManagerSer
 		if (!window?.win) {
 			throw new Error(`Invalid windowId: ${windowId}`);
 		}
+		// 在这个窗口的所有 frames（包括 mainFrame）中查找指定名字的
 		const frame = window.win.webContents.mainFrame.framesInSubtree.find(frame => {
 			return frame.name === frameName;
 		});

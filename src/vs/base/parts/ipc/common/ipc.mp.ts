@@ -67,7 +67,7 @@ export class Client extends IPCClient implements IDisposable {
 
 	constructor(port: MessagePort, clientId: string) {
 		const protocol = new Protocol(port);
-		super(protocol, clientId);
+		super(protocol, clientId); // 把 clientId 作为上下文对象
 
 		this.protocol = protocol;
 	}

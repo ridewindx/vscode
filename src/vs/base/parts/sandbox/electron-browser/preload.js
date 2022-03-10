@@ -16,6 +16,7 @@
 	 * @returns {true | never}
 	 */
 	function validateIPC(channel) {
+		// IPC 通信的 channel 必须以 vscode: 开头
 		if (!channel || !channel.startsWith('vscode:')) {
 			throw new Error(`Unsupported event IPC channel '${channel}'`);
 		}
@@ -40,6 +41,7 @@
 	 * @returns {string | undefined}
 	 */
 	function parseArgv(key) {
+		// 获得命令行参数中指定键 key 的值
 		for (const arg of process.argv) {
 			if (arg.indexOf(`--${key}=`) === 0) {
 				return arg.split('=')[1];
@@ -62,6 +64,7 @@
 
 	/** @type {Promise<ISandboxConfiguration>} */
 	const resolveConfiguration = (async () => {
+		// 通过 BrowserWindow.webPreferences.additionalArguments 传入的 --vscode-window-config 参数
 		const windowConfigIpcChannel = parseArgv('vscode-window-config');
 		if (!windowConfigIpcChannel) {
 			throw new Error('Preload: did not find expected vscode-window-config in renderer process arguments list.');
@@ -222,12 +225,14 @@
 						// send the `MessagePort` safely over, even when context
 						// isolation is enabled
 						if (nonce === responseNonce) {
-							ipcRenderer.off(responseChannel, responseListener);
-							window.postMessage(nonce, '*', e.ports);
+							ipcRenderer.off(responseChannel, responseListener); // 监听到结果就取消监听
+							// ports 是由主进程创建的
+							window.postMessage(nonce, '*', e.ports); // 发送结果给 web page
 						}
 					};
 
 					// handle reply from main
+					// 接收主进程的响应
 					ipcRenderer.on(responseChannel, responseListener);
 				}
 			}
@@ -340,6 +345,8 @@
 	// Use `contextBridge` APIs to expose globals to VSCode
 	// only if context isolation is enabled, otherwise just
 	// add to the DOM global.
+	// 进程隔离默认是开启的 https://www.electronjs.org/zh/docs/latest/tutorial/context-isolation
+	// 在 web page 中可以通过 window.vscode 来访问 ipcRenderer/ipcMessagePort/webFrame/process/context
 	if (process.contextIsolated) {
 		try {
 			contextBridge.exposeInMainWorld('vscode', globals);

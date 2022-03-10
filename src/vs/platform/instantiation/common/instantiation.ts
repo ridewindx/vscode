@@ -16,12 +16,14 @@ export namespace _util {
 	export const DI_DEPENDENCIES = '$di$dependencies';
 
 	export function getServiceDependencies(ctor: any): { id: ServiceIdentifier<any>; index: number }[] {
+		// 一个服务类的所有依赖服务的 id 都存到这个服务类的构造函数的 DI_DEPENDENCIES 属性的数组中
 		return ctor[DI_DEPENDENCIES] || [];
 	}
 }
 
 // --- interfaces ------
 
+// 是否含有 _serviceBrand 属性是判断一个对象是否为服务实例
 export type BrandedService = { _serviceBrand: undefined };
 
 export interface IConstructorSignature<T, Args extends any[] = []> {
@@ -37,6 +39,8 @@ export const IInstantiationService = createDecorator<IInstantiationService>('ins
 /**
  * Given a list of arguments as a tuple, attempt to extract the leading, non-service arguments
  * to their own tuple.
+ * 给定参数列表，抽取前面非服务依赖类型的参数，最多 8 个
+ * 这里是用 BrandedService 类型来识别非服务依赖类型的参数
  */
 type GetLeadingNonServiceArgs<Args> =
 	Args extends [...BrandedService[]] ? []
@@ -69,6 +73,7 @@ export interface IInstantiationService {
 
 /**
  * Identifies a service of type `T`.
+ * 服务类的标识，用于服务依赖注入机制中对服务实例的识别
  */
 export interface ServiceIdentifier<T> {
 	(...args: any[]): void;
@@ -86,6 +91,7 @@ function storeServiceDependency(id: Function, target: Function, index: number): 
 
 /**
  * The *only* valid way to create a {{ServiceIdentifier}}.
+ * 创建 ServiceIdentifier 服务依赖参数的装饰器
  */
 export function createDecorator<T>(serviceId: string): ServiceIdentifier<T> {
 
@@ -94,6 +100,7 @@ export function createDecorator<T>(serviceId: string): ServiceIdentifier<T> {
 	}
 
 	const id = <any>function (target: Function, key: string, index: number): any {
+		// 当此装饰器装饰在构造函数的服务依赖参数上时，target 就是构造函数，key 是参数名，index 是此参数在构造函数参数列表中的位置
 		if (arguments.length !== 3) {
 			throw new Error('@IServiceName-decorator can only be used to decorate a parameter');
 		}

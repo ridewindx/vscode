@@ -36,6 +36,7 @@ export interface IDiskFileSystemProviderOptions {
 	};
 }
 
+// DiskFileSystemProvider 抽象类，其实仅仅实现了抽象的 File Watching 功能
 export abstract class AbstractDiskFileSystemProvider extends Disposable {
 
 	constructor(

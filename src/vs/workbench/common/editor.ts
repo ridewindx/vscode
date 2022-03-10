@@ -52,33 +52,39 @@ export const TEXT_DIFF_EDITOR_ID = 'workbench.editors.textDiffEditor';
  */
 export const BINARY_DIFF_EDITOR_ID = 'workbench.editors.binaryResourceDiffEditor';
 
+// editor pane 的描述符
 export interface IEditorDescriptor<T extends IEditorPane> {
 
 	/**
 	 * The unique type identifier of the editor. All instances
 	 * of the same `IEditorPane` should have the same type
 	 * identifier.
+	 * 特定类型的 IEditorPane 的类型 id
 	 */
 	readonly typeId: string;
 
 	/**
 	 * The display name of the editor.
+	 * editor 的名字，其实也是特定类型对应的泛称
 	 */
 	readonly name: string;
 
 	/**
 	 * Instantiates the editor pane using the provided services.
+	 * 实例化 editor pane
 	 */
 	instantiate(instantiationService: IInstantiationService): T;
 
 	/**
 	 * Whether the descriptor is for the provided editor pane.
+	 * 判断传入 editor pane 是否对应此描述符
 	 */
 	describes(editorPane: T): boolean;
 }
 
 /**
  * The editor pane is the container for workbench editors.
+ * 工作台主编辑区域中的 editor pane 编辑窗格
  */
 export interface IEditorPane extends IComposite {
 

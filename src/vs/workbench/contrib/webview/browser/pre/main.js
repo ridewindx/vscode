@@ -18,6 +18,7 @@ const isFirefox = (
 	navigator.userAgent.indexOf('Firefox') >= 0
 );
 
+// 获得当前页面 URL 的一些查询参数
 const searchParams = new URL(location.toString()).searchParams;
 const ID = searchParams.get('id');
 const onElectron = searchParams.get('platform') === 'electron';
@@ -32,6 +33,7 @@ const parentOrigin = searchParams.get('parentOrigin');
  * @param {() => void} handlers.onBlur
  */
 const trackFocus = ({ onFocus, onBlur }) => {
+	// 轮询，250ms
 	const interval = 250;
 	let isFocused = document.hasFocus();
 	setInterval(() => {
@@ -70,6 +72,7 @@ function assertIsDefined(obj) {
 
 const vscodePostMessageFuncName = '__vscode_post_message__';
 
+// 包含默认样式的元素
 const defaultStyles = document.createElement('style');
 defaultStyles.id = '_defaultStyles';
 defaultStyles.textContent = `
@@ -167,6 +170,8 @@ defaultStyles.textContent = `
  */
 function getVsCodeApiScript(allowMultipleAPIAcquire, state) {
 	const encodedState = state ? encodeURIComponent(state) : undefined;
+	// globalThis 就是全局对象，比如 window，参见 https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/globalThis
+	// 设置全局函数 acquireVsCodeApi，返回的对象包含 postMessage 和 setState 方法
 	return /* js */`
 			globalThis.acquireVsCodeApi = (function() {
 				const originalPostMessage = window.parent['${vscodePostMessageFuncName}'].bind(window.parent);
@@ -204,6 +209,7 @@ function getVsCodeApiScript(allowMultipleAPIAcquire, state) {
 		`;
 }
 
+// 注册 service worker 的脚本，且检查版本是否正确
 /** @type {Promise<void>} */
 const workerReady = new Promise((resolve, reject) => {
 	if (!areServiceWorkersEnabled()) {
@@ -211,6 +217,7 @@ const workerReady = new Promise((resolve, reject) => {
 	}
 
 	const swPath = `service-worker.js?v=${expectedWorkerVersion}&vscode-resource-base-authority=${searchParams.get('vscode-resource-base-authority')}&remoteAuthority=${searchParams.get('remoteAuthority') ?? ''}`;
+	// 注册 service worker 的脚本，且检查版本是否正确
 	navigator.serviceWorker.register(swPath)
 		.then(() => navigator.serviceWorker.ready)
 		.then(async registration => {
@@ -288,6 +295,7 @@ const hostMessaging = new class HostMessaging {
 	}
 
 	/**
+	 * 向父窗口发送指定 channel 上的消息
 	 * @param {string} channel
 	 * @param {any} data
 	 * @param {any} [transfer]
@@ -297,6 +305,7 @@ const hostMessaging = new class HostMessaging {
 	}
 
 	/**
+	 * 注册指定 channel 的处理函数
 	 * @param {string} channel
 	 * @param {(event: MessageEvent, data: any) => void} handler
 	 */
@@ -310,6 +319,7 @@ const hostMessaging = new class HostMessaging {
 	}
 
 	signalReady() {
+		// 向父窗口告知 ready 消息和传送 message port
 		window.parent.postMessage({ target: ID, channel: 'webview-ready', data: {} }, parentOrigin, [this.channel.port2]);
 	}
 }();
@@ -669,8 +679,8 @@ function areServiceWorkersEnabled() {
  * @return {string}
  */
 function toContentHtml(data) {
-	const options = data.options;
-	const text = data.contents;
+	const options = data.options; // 选项
+	const text = data.contents; // HTML 文档
 	const newDocument = new DOMParser().parseFromString(text, 'text/html');
 
 	newDocument.querySelectorAll('a').forEach(a => {
@@ -688,6 +698,7 @@ function toContentHtml(data) {
 	}
 
 	// Inject default script
+	// 注入默认脚本
 	if (options.allowScripts) {
 		const defaultScript = newDocument.createElement('script');
 		defaultScript.id = '_vscodeApiScript';
@@ -773,10 +784,11 @@ onDomReady(() => {
 
 	// update iframe-contents
 	let updateId = 0;
+	// 接收到 content 消息就创建 iframe 元素
 	hostMessaging.onMessage('content', async (_event, /** @type {ContentUpdateData} */ data) => {
 		const currentUpdateId = ++updateId;
 		try {
-			await workerReady;
+			await workerReady; // 等待 service worker 加载脚本就绪
 		} catch (e) {
 			console.error(`Webview fatal error: ${e}`);
 			hostMessaging.postMessage('fatal-error', { message: e + '' });
@@ -818,6 +830,7 @@ onDomReady(() => {
 		// Clean up old pending frames and set current one as new one
 		const previousPendingFrame = getPendingFrame();
 		if (previousPendingFrame) {
+			// 把 id 还是 pending-frame 的 iframe 元素删除
 			previousPendingFrame.setAttribute('id', '');
 			document.body.removeChild(previousPendingFrame);
 		}
@@ -825,7 +838,7 @@ onDomReady(() => {
 			pendingMessages = [];
 		}
 
-		const newFrame = document.createElement('iframe');
+		const newFrame = document.createElement('iframe'); // 创建 iframe 元素
 		newFrame.setAttribute('id', 'pending-frame');
 		newFrame.setAttribute('frameborder', '0');
 
@@ -847,8 +860,8 @@ onDomReady(() => {
 		// into it to get around this.
 		newFrame.src = `./fake.html?id=${ID}`;
 
-		newFrame.style.cssText = 'display: block; margin: 0; overflow: hidden; position: absolute; width: 100%; height: 100%; visibility: hidden';
-		document.body.appendChild(newFrame);
+		newFrame.style.cssText = 'display: block; margin: 0; overflow: hidden; position: absolute; width: 100%; height: 100%; visibility: hidden'; // 隐藏任何内容
+		document.body.appendChild(newFrame); // 把 iframe 元素附加到 body
 
 		/**
 		 * @param {Document} contentDocument
@@ -857,7 +870,7 @@ onDomReady(() => {
 			// Workaround for https://bugs.chromium.org/p/chromium/issues/detail?id=978325
 			setTimeout(() => {
 				contentDocument.open();
-				contentDocument.write(newDocument);
+				contentDocument.write(newDocument); // 写入新文档
 				contentDocument.close();
 				hookupOnLoadHandlers(newFrame);
 
@@ -869,7 +882,9 @@ onDomReady(() => {
 
 		if (!options.allowScripts && isSafari) {
 			// On Safari for iframes with scripts disabled, the `DOMContentLoaded` never seems to be fired: https://bugs.webkit.org/show_bug.cgi?id=33604
+			// 在 Safari 环境下且脚本被禁用
 			// Use polling instead.
+			// 使用轮询来代替，10ms 间隔
 			const interval = setInterval(() => {
 				// If the frame is no longer mounted, loading has stopped
 				if (!newFrame.parentElement) {
@@ -906,13 +921,16 @@ onDomReady(() => {
 				const wasFocused = document.hasFocus();
 				const oldActiveFrame = getActiveFrame();
 				if (oldActiveFrame) {
+					// 移除旧的 active-frame 的 iframe 元素
 					document.body.removeChild(oldActiveFrame);
 				}
 				// Styles may have changed since we created the element. Make sure we re-style
 				if (initialStyleVersion !== styleVersion) {
 					applyStyles(newFrame.contentDocument, newFrame.contentDocument.body);
 				}
+				// 把 pending-frame 的 iframe 设为新的 active-frame 的 iframe
 				newFrame.setAttribute('id', 'active-frame');
+				// 设为可见
 				newFrame.style.visibility = 'visible';
 
 				contentWindow.addEventListener('scroll', handleInnerScroll);
@@ -981,6 +999,7 @@ onDomReady(() => {
 		if (!pending) {
 			const target = getActiveFrame();
 			if (target) {
+				// 把消息发送给当前 active 的 iframe
 				assertIsDefined(target.contentWindow).postMessage(data.message, window.origin, data.transfer);
 				return;
 			}
@@ -1016,6 +1035,7 @@ onDomReady(() => {
 		}
 		lastFindValue = data.value;
 
+		// 参见 https://developer.mozilla.org/en-US/docs/Web/API/Window/find
 		const didFind = (/** @type {any} */ (target.contentWindow)).find(
 			data.value,
 			/* caseSensitive*/ false,
@@ -1043,6 +1063,7 @@ onDomReady(() => {
 		}
 	});
 
+	// 检测到此页面聚焦改变就发出相应消息
 	trackFocus({
 		onFocus: () => hostMessaging.postMessage('did-focus'),
 		onBlur: () => hostMessaging.postMessage('did-blur')

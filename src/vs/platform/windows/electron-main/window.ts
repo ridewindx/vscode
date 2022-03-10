@@ -76,6 +76,7 @@ const enum ReadyState {
 	READY
 }
 
+// CodeWindow 类是 VS Code 中的窗口类，大部分窗口都是这个类的实例
 export class CodeWindow extends Disposable implements ICodeWindow {
 
 	//#region Events
@@ -97,10 +98,10 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 
 	//#region Properties
 
-	private _id: number;
+	private _id: number; // 窗口 id
 	get id(): number { return this._id; }
 
-	private _win: BrowserWindow;
+	private _win: BrowserWindow; // Electron 中的 BrowserWindow 窗口类
 	get win(): BrowserWindow | null { return this._win; }
 
 	private _lastFocusTime = -1;
@@ -140,6 +141,7 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 	private currentHttpProxy: string | undefined = undefined;
 	private currentNoProxy: string | undefined = undefined;
 
+	// 配置对象，可以被渲染进程 preload 脚本访问到
 	private readonly configObjectUrl = this._register(this.protocolMainService.createIPCObjectUrl<INativeWindowConfiguration>());
 	private pendingLoadConfig: INativeWindowConfiguration | undefined;
 	private wasLoaded = false;
@@ -347,6 +349,7 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 		// when a window is getting focused while the application
 		// is not in the foreground.
 		if (isMacintosh && options?.force) {
+			// 把 App 带到前台
 			app.focus({ steal: true });
 		}
 
@@ -355,7 +358,7 @@ export class CodeWindow extends Disposable implements ICodeWindow {
 		}
 
 		if (this._win.isMinimized()) {
-			this._win.restore();
+			this._win.restore(); // 从最小化状态恢复到之前
 		}
 
 		this._win.focus();

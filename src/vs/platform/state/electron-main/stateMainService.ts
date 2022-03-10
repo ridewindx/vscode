@@ -92,7 +92,7 @@ export class FileStorage {
 		}
 
 		if (save) {
-			this.save();
+			this.save(); // 异步保存不等待
 		}
 	}
 
@@ -100,6 +100,7 @@ export class FileStorage {
 
 		// Only update if the key is actually present (not undefined)
 		if (!isUndefined(this.storage[key])) {
+			// 把值设为 undefined，则 JSON.stringify 是会直接忽略掉这个键值对了
 			this.storage[key] = undefined;
 			this.save();
 		}
@@ -158,6 +159,7 @@ export class StateMainService implements IStateMainService {
 		@ILogService logService: ILogService,
 		@IFileService fileService: IFileService
 	) {
+		// 写入用户数据目录下的 storage.json 文件
 		this.fileStorage = new FileStorage(URI.file(join(environmentMainService.userDataPath, StateMainService.STATE_FILE)), logService, fileService);
 	}
 

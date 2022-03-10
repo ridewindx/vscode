@@ -8,6 +8,7 @@ import { BrandedService, ServiceIdentifier } from './instantiation';
 
 const _registry: [ServiceIdentifier<any>, SyncDescriptor<any>][] = [];
 
+// 注册全局服务单例的 SyncDescriptor
 export function registerSingleton<T, Services extends BrandedService[]>(id: ServiceIdentifier<T>, ctor: new (...services: Services) => T, supportsDelayedInstantiation?: boolean): void;
 export function registerSingleton<T, Services extends BrandedService[]>(id: ServiceIdentifier<T>, descriptor: SyncDescriptor<any>): void;
 export function registerSingleton<T, Services extends BrandedService[]>(id: ServiceIdentifier<T>, ctorOrDescriptor: { new(...services: Services): T } | SyncDescriptor<any>, supportsDelayedInstantiation?: boolean): void {
@@ -18,6 +19,7 @@ export function registerSingleton<T, Services extends BrandedService[]>(id: Serv
 	_registry.push([id, ctorOrDescriptor]);
 }
 
+// 获取全局服务单例的 SyncDescriptor
 export function getSingletonServiceDescriptors(): [ServiceIdentifier<any>, SyncDescriptor<any>][] {
 	return _registry;
 }

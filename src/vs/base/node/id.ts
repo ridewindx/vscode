@@ -81,9 +81,9 @@ let machineId: Promise<string>;
 export async function getMachineId(): Promise<string> {
 	if (!machineId) {
 		machineId = (async () => {
-			const id = await getMacMachineId();
+			const id = await getMacMachineId(); // 根据 MAC 地址得到的 ID
 
-			return id || uuid.generateUuid(); // fallback, generate a UUID
+			return id || uuid.generateUuid(); // fallback, generate a UUID 或者生成 UUID
 		})();
 	}
 
@@ -93,7 +93,7 @@ export async function getMachineId(): Promise<string> {
 async function getMacMachineId(): Promise<string | undefined> {
 	try {
 		const crypto = await import('crypto');
-		const macAddress = getMac();
+		const macAddress = getMac(); // 获取网络 MAC 地址
 		return crypto.createHash('sha256').update(macAddress, 'utf8').digest('hex');
 	} catch (err) {
 		errors.onUnexpectedError(err);

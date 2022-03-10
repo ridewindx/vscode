@@ -65,6 +65,7 @@ export interface IConfigurationChangeEvent {
 	readonly affectedKeys: string[];
 	readonly change: IConfigurationChange;
 
+	// 此事件是否影响了指定配置
 	affectsConfiguration(configuration: string, overrides?: IConfigurationOverrides): boolean;
 
 	// Following data is used for telemetry

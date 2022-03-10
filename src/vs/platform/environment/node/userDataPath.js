@@ -49,12 +49,14 @@
 		function doGetUserDataPath(cliArgs) {
 
 			// 1. Support portable mode
+			// 若有 VSCODE_PORTABLE 环境变量，说明是可移植模式，则取可移植目录下的 user-data 目录
 			const portablePath = process.env['VSCODE_PORTABLE'];
 			if (portablePath) {
 				return path.join(portablePath, 'user-data');
 			}
 
 			// 2. Support global VSCODE_APPDATA environment variable
+			// 若有 VSCODE_APPDATA 环境变量，则取这个目录下的产品名目录
 			let appDataPath = process.env['VSCODE_APPDATA'];
 			if (appDataPath) {
 				return path.join(appDataPath, productName);
@@ -64,6 +66,8 @@
 			// all processes https://github.com/electron/electron/blob/1897b14af36a02e9aa7e4d814159303441548251/shell/browser/electron_browser_client.cc#L546-L553
 			// Check VSCODE_PORTABLE and VSCODE_APPDATA before this case to get correct values.
 			// 3. Support explicit --user-data-dir
+			// 取命令行参数 --user-data-dir 指定的目录
+			// 若不是绝对目录，则会相对于当前目录
 			const cliPath = cliArgs['user-data-dir'];
 			if (cliPath) {
 				return cliPath;
@@ -92,6 +96,7 @@
 					throw new Error('Platform not supported');
 			}
 
+			// 取特定平台的 App 数据目录下的产品名目录
 			return path.join(appDataPath, productName);
 		}
 
@@ -119,6 +124,7 @@
 		const path = require('path');
 		const os = require('os');
 
+		// 注意这里的 VSCODE_CWD 环境变量指定当前目录
 		module.exports = factory(path, os, pkg.name, process.env['VSCODE_CWD'] || process.cwd()); // commonjs
 	} else {
 		throw new Error('Unknown context');

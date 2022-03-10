@@ -35,6 +35,7 @@ export namespace Extensions {
 	export const ViewsRegistry = 'workbench.registry.view';
 }
 
+// ViewContainer 所在位置
 export const enum ViewContainerLocation {
 	Sidebar,
 	Panel,
@@ -604,7 +605,7 @@ export interface IViewDescriptorService {
 	readonly _serviceBrand: undefined;
 
 	// ViewContainers
-	readonly viewContainers: ReadonlyArray<ViewContainer>;
+	readonly viewContainers: ReadonlyArray<ViewContainer>; // ViewContainer 列表
 	readonly onDidChangeViewContainers: Event<{ added: ReadonlyArray<{ container: ViewContainer; location: ViewContainerLocation }>; removed: ReadonlyArray<{ container: ViewContainer; location: ViewContainerLocation }> }>;
 
 	getDefaultViewContainer(location: ViewContainerLocation): ViewContainer | undefined;
@@ -719,18 +720,18 @@ export type TreeViewItemHandleArg = {
 };
 
 export enum TreeItemCollapsibleState {
-	None = 0,
-	Collapsed = 1,
-	Expanded = 2
+	None = 0, // 无子项
+	Collapsed = 1, // 折叠
+	Expanded = 2 // 展开
 }
 
 export interface ITreeItemLabel {
 
 	label: string;
 
-	highlights?: [number, number][];
+	highlights?: [number, number][]; // 高亮范围的数组
 
-	strikethrough?: boolean;
+	strikethrough?: boolean; // 是否删除线
 
 }
 
@@ -760,7 +761,7 @@ export interface ITreeItem {
 
 	command?: Command;
 
-	children?: ITreeItem[];
+	children?: ITreeItem[]; // 子项列表
 
 	accessibilityInformation?: IAccessibilityInformation;
 }

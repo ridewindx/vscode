@@ -101,6 +101,7 @@ export interface IExtensionApiFactory {
 
 /**
  * This method instantiates and returns the extension API surface
+ * 实例化 Extension API 接口
  */
 export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): IExtensionApiFactory {
 

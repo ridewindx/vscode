@@ -34,6 +34,7 @@ export class Client extends MessagePortClient implements IDisposable {
  * This method opens a message channel connection
  * in the target window. The target window needs
  * to use the `Server` from `electron-sandbox/ipc.mp`.
+ * 参见 src/vs/base/parts/ipc/electron-browser/ipc.mp.ts 中的服务端实现
  */
 export async function connect(window: BrowserWindow): Promise<MessagePortMain> {
 

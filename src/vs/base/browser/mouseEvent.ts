@@ -112,6 +112,7 @@ export class DragMouseEvent extends StandardMouseEvent {
 
 }
 
+// 参见 https://developer.mozilla.org/zh-CN/docs/Web/API/Element/wheel_event
 export interface IMouseWheelEvent extends MouseEvent {
 	readonly wheelDelta: number;
 	readonly wheelDeltaX: number;

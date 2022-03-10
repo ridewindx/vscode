@@ -39,11 +39,12 @@ class Menu implements IMenu {
 
 	private readonly _disposables = new DisposableStore();
 
+	// 有菜单项发生变化或与菜单项们有关联的上下文键发生变化时触发事件
 	private readonly _onDidChange: Emitter<IMenu>;
 	readonly onDidChange: Event<IMenu>;
 
-	private _menuGroups: MenuItemGroup[] = [];
-	private _contextKeys: Set<string> = new Set();
+	private _menuGroups: MenuItemGroup[] = []; // 按组名分类菜单项
+	private _contextKeys: Set<string> = new Set(); // 与所有命令相关的上下文键
 
 	constructor(
 		private readonly _id: MenuId,
@@ -58,12 +59,13 @@ class Menu implements IMenu {
 		// This usually happen while code and extensions are loaded and affects the over
 		// structure of the menu
 		const rebuildMenuSoon = new RunOnceScheduler(() => {
-			this._build();
+			this._build(); // 重建此菜单
 			this._onDidChange.fire(this);
 		}, _options.eventDebounceDelay);
 		this._disposables.add(rebuildMenuSoon);
 		this._disposables.add(MenuRegistry.onDidChangeMenu(e => {
 			if (e.has(_id)) {
+				// 此菜单有菜单项注册变更时触发重建
 				rebuildMenuSoon.schedule();
 			}
 		}));
@@ -77,6 +79,7 @@ class Menu implements IMenu {
 			contextKeyListener.add(fireChangeSoon);
 			contextKeyListener.add(_contextKeyService.onDidChangeContext(e => {
 				if (e.affectsSome(this._contextKeys)) {
+					// 有关联的上下文键发生变化就触发事件
 					fireChangeSoon.schedule();
 				}
 			}));
@@ -102,10 +105,11 @@ class Menu implements IMenu {
 		this._menuGroups.length = 0;
 		this._contextKeys.clear();
 
+		// 获取此菜单的菜单项列表
 		const menuItems = MenuRegistry.getMenuItems(this._id);
 
 		let group: MenuItemGroup | undefined;
-		menuItems.sort(Menu._compareMenuItems);
+		menuItems.sort(Menu._compareMenuItems); // 排序
 
 		for (const item of menuItems) {
 			// group by groupId
@@ -121,6 +125,7 @@ class Menu implements IMenu {
 		}
 	}
 
+	// 收集与菜单项们有关联的上下文键集合
 	private _collectContextKeys(item: IMenuItem | ISubmenuItem): void {
 
 		Menu._fillInKbExprKeys(item.when, this._contextKeys);
@@ -139,10 +144,12 @@ class Menu implements IMenu {
 		} else if (this._options.emitEventsForSubmenuChanges) {
 			// recursively collect context keys from submenus so that this
 			// menu fires events when context key changes affect submenus
+			// 递归检查子菜单被上下文键影响
 			MenuRegistry.getMenuItems(item.submenu).forEach(this._collectContextKeys, this);
 		}
 	}
 
+	// 检查上下文是否满足菜单项的 when 表达式，返回分组的菜单项动作列表
 	getActions(options?: IMenuActionOptions): [string, Array<MenuItemAction | SubmenuItemAction>][] {
 		const result: [string, Array<MenuItemAction | SubmenuItemAction>][] = [];
 		for (let group of this._menuGroups) {
@@ -193,14 +200,14 @@ class Menu implements IMenu {
 				return 1;
 			}
 
-			// lexical sort for groups
+			// lexical sort for groups 按组名排序
 			let value = aGroup.localeCompare(bGroup);
 			if (value !== 0) {
 				return value;
 			}
 		}
 
-		// sort on priority - default is 0
+		// sort on priority - default is 0 按 order 排序
 		let aPrio = a.order || 0;
 		let bPrio = b.order || 0;
 		if (aPrio < bPrio) {
@@ -209,7 +216,7 @@ class Menu implements IMenu {
 			return 1;
 		}
 
-		// sort on titles
+		// sort on titles 按 title 排序
 		return Menu._compareTitles(
 			isIMenuItem(a) ? a.command.title : a.title,
 			isIMenuItem(b) ? b.command.title : b.title

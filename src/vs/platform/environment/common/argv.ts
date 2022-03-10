@@ -5,9 +5,10 @@
 
 /**
  * A list of command line arguments we support natively.
+ * 解析完的命令行参数，键是参数名，值是参数值
  */
 export interface NativeParsedArgs {
-	_: string[];
+	_: string[]; // 未命名的位置参数的数组
 	'folder-uri'?: string[]; // undefined or array of 1 or more
 	'file-uri'?: string[]; // undefined or array of 1 or more
 	_urls?: string[];

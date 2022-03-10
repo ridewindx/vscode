@@ -103,10 +103,11 @@ import { IWorkspacesManagementMainService, WorkspacesManagementMainService } fro
 /**
  * The main VS Code application. There will only ever be one instance,
  * even if the user starts many instances (e.g. from the command line).
+ * VS Code 主应用，只会存在一个实例
  */
 export class CodeApplication extends Disposable {
 
-	private windowsMainService: IWindowsMainService | undefined;
+	private windowsMainService: IWindowsMainService | undefined; // 窗口主服务
 	private nativeHostMainService: INativeHostMainService | undefined;
 
 	constructor(
@@ -123,7 +124,7 @@ export class CodeApplication extends Disposable {
 	) {
 		super();
 
-		this.configureSession();
+		this.configureSession(); // 配置 Electron 的 defaultSession
 		this.registerListeners();
 	}
 
@@ -277,6 +278,7 @@ export class CodeApplication extends Disposable {
 		this.lifecycleMainService.onWillShutdown(() => this.dispose());
 
 		// Contextmenu via IPC support
+		// 注册创建上下文菜单的 IPC 监听支持
 		registerContextMenuListener();
 
 		// Accessibility change event
@@ -306,9 +308,11 @@ export class CodeApplication extends Disposable {
 				event.preventDefault();
 			});
 
+			// https://www.electronjs.org/docs/latest/api/window-open
 			contents.setWindowOpenHandler(({ url }) => {
 				this.nativeHostMainService?.openExternal(undefined, url);
 
+				// 拒绝 Electron 自己打开新窗口
 				return { action: 'deny' };
 			});
 		});
@@ -470,6 +474,7 @@ export class CodeApplication extends Disposable {
 		}
 
 		// Main process server (electron IPC based)
+		// 基于 Electron IPC 的主进程 IPC 服务端
 		const mainProcessElectronServer = new ElectronIPCServer();
 
 		// Resolve unique machine ID
@@ -477,10 +482,11 @@ export class CodeApplication extends Disposable {
 		const machineId = await this.resolveMachineId();
 		this.logService.trace(`Resolved machine identifier: ${machineId}`);
 
-		// Shared process
+		// Shared process 共享进程
 		const { sharedProcess, sharedProcessReady, sharedProcessClient } = this.setupSharedProcess(machineId);
 
 		// Services
+		// APP 服务容器；appInstantiationService 是 mainInstantiationService 的子服务容器
 		const appInstantiationService = await this.initServices(machineId, sharedProcess, sharedProcessReady);
 
 		// Create driver
@@ -513,10 +519,12 @@ export class CodeApplication extends Disposable {
 
 		// We cache the machineId for faster lookups on startup
 		// and resolve it only once initially if not cached or we need to replace the macOS iBridge device
+		// 机器 ID 只取一次并保存
 		let machineId = this.stateMainService.getItem<string>(machineIdKey);
 		if (!machineId || (isMacintosh && machineId === '6c9d2bc8f91b89624add29c0abeae7fb42bf539fa1cdb2e3e57cd668fa9bcead')) {
 			machineId = await getMachineId();
 
+			// 保存到状态存储
 			this.stateMainService.setItem(machineIdKey, machineId);
 		}
 
@@ -548,7 +556,7 @@ export class CodeApplication extends Disposable {
 	private async initServices(machineId: string, sharedProcess: SharedProcess, sharedProcessReady: Promise<MessagePortClient>): Promise<IInstantiationService> {
 		const services = new ServiceCollection();
 
-		// Update
+		// Update 自动更新服务
 		switch (process.platform) {
 			case 'win32':
 				services.set(IUpdateService, new SyncDescriptor(Win32UpdateService));
@@ -567,7 +575,7 @@ export class CodeApplication extends Disposable {
 				break;
 		}
 
-		// Windows
+		// Windows 窗口主服务
 		services.set(IWindowsMainService, new SyncDescriptor(WindowsMainService, [machineId, this.userEnv]));
 
 		// Dialogs
@@ -616,7 +624,7 @@ export class CodeApplication extends Disposable {
 		services.set(IStorageMainService, new SyncDescriptor(StorageMainService));
 		services.set(IGlobalStorageMainService, new SyncDescriptor(GlobalStorageMainService));
 
-		// External terminal
+		// External terminal 外部终端服务
 		if (isWindows) {
 			services.set(IExternalTerminalMainService, new SyncDescriptor(WindowsExternalTerminalService));
 		} else if (isMacintosh) {
@@ -722,6 +730,7 @@ export class CodeApplication extends Disposable {
 		mainProcessElectronServer.registerChannel('webview', webviewChannel);
 
 		// Storage (main & shared process)
+		// 注册 storage 通道的服务端为 IStorageMainService
 		const storageChannel = this._register(new StorageDatabaseChannel(this.logService, accessor.get(IStorageMainService)));
 		mainProcessElectronServer.registerChannel('storage', storageChannel);
 		sharedProcessClient.then(client => client.registerChannel('storage', storageChannel));
@@ -1086,6 +1095,7 @@ export class CodeApplication extends Disposable {
 		// Remote Authorities
 		protocol.registerHttpProtocol(Schemas.vscodeRemoteResource, (request, callback) => {
 			callback({
+				// 替换为 http:// 的 URL
 				url: request.url.replace(/^vscode-remote-resource:/, 'http:'),
 				method: request.method
 			});

@@ -76,6 +76,7 @@ export class StringIterator implements IKeyIterator<string> {
 	}
 }
 
+// 以 . 分割的配置键
 export class ConfigKeysIterator implements IKeyIterator<string> {
 
 	private _value!: string;
@@ -127,6 +128,7 @@ export class ConfigKeysIterator implements IKeyIterator<string> {
 	}
 }
 
+// 以 / 或 \ 分隔的路径键
 export class PathIterator implements IKeyIterator<string> {
 
 	private _value!: string;
@@ -326,6 +328,9 @@ const enum Dir {
 	Right = 1,
 }
 
+// 三叉搜索树，是 trie 树的一种实现，用于实现带前缀搜索功能的关联数组
+// 比标准的前缀树更节省空间，但是牺牲了部分查找速度
+// https://zh.wikipedia.org/wiki/三叉搜索树
 export class TernarySearchTree<K, V> {
 
 	static forUris<E>(ignorePathCasing: (key: URI) => boolean = () => false): TernarySearchTree<URI, E> {
@@ -650,6 +655,7 @@ export class TernarySearchTree<K, V> {
 		return node;
 	}
 
+	// 在 map 的键中查找是 key 字符串的最长前缀子串，返回键对应的值
 	findSubstr(key: K): V | undefined {
 		const iter = this._iter.reset(key);
 		let node = this._root;
@@ -674,6 +680,7 @@ export class TernarySearchTree<K, V> {
 		return node && node.value || candidate;
 	}
 
+	// 在 map 查找以 key 字符串为最长前缀子串的键，返回键对应的值
 	findSuperstr(key: K): IterableIterator<[K, V]> | undefined {
 		const iter = this._iter.reset(key);
 		let node = this._root;

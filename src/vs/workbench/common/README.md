@@ -1,0 +1,15 @@
+- Memento 备忘录类，可以使用 StorageService 存储 global 和 workspace 两种域的 object，用于 UI 组件，也使用 UI 组件的 id 来区分存储
+- Component 组件类，有 id，带 memento，被很多更具体的 UI 组件类继承
+- editor 目录
+  - EditorInput
+    - SideBySideEditorInput
+      - DiffEditorInput
+    - AbstractResourceEditorInput
+      - AbstractTextResourceEditorInput
+      - TextResourceEditorInput
+  - EditorModel
+    - BinaryEditorModel
+    - DiffEditorModel
+      - TextDiffEditorModel
+    - BaseTextEditorModel
+      - TextResourceEditorModel

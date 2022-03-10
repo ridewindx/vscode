@@ -25,6 +25,7 @@ export interface ILayoutService {
 
 	/**
 	 * Container of the application.
+	 * 应用的容器 HTMLElement
 	 */
 	readonly container: HTMLElement;
 
